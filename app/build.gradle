@@ -103,6 +103,10 @@ dependencies {
     // coil
     implementation("io.coil-kt:coil-compose:2.0.0-rc02")
 
+    // zoomable image view
     implementation("com.mxalbert.zoomable:zoomable:1.4.1")
+
+    // bundle mlkit face detection model with app, 6.9MB size increase but model immediately available
+    implementation 'com.google.mlkit:face-detection:16.1.5'
 
 }

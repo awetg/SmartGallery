@@ -3,8 +3,9 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.awetg.smartgallery">
 
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="38" />
+        android:maxSdkVersion="28" />
 <!--    change max sdk version to 28-->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 

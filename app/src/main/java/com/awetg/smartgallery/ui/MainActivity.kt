@@ -7,17 +7,19 @@ import android.provider.MediaStore
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.work.*
-import com.awetg.smartgallery.ui.components.BottomNavController
 import com.awetg.smartgallery.common.*
-import com.awetg.smartgallery.ui.theme.SmartGalleryTheme
-import com.awetg.smartgallery.common.util.PermissionUtil
 import com.awetg.smartgallery.common.util.SharedPreferenceUtil
 import com.awetg.smartgallery.services.MediaScanWorker
+import com.awetg.smartgallery.ui.components.BottomNavController
 import com.awetg.smartgallery.ui.screens.photosScreen.PhotosViewModel
+import com.awetg.smartgallery.ui.theme.SmartGalleryTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -27,15 +29,24 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var sharedPreferenceUtil: SharedPreferenceUtil
 
+    private var permissionsGranted = false
+    private lateinit var permissionLauncher: ActivityResultLauncher<Array<String>>
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (PermissionUtil.allPermissionGranted(this)) checkMediaScan() else PermissionUtil.requestAllMissingPermissions(this)
+        permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
+            if(results.values.any { !it }) {
+                finishAffinity()
+            }
+            checkMediaScan()
+        }
+        if (permissionsGranted) checkMediaScan() else requestPermission()
         setContent { AppView() }
     }
 
     override fun onResume() {
         super.onResume()
-        if (PermissionUtil.allPermissionGranted(this)) checkMediaScan()
+        if (permissionsGranted) checkMediaScan()
     }
 
     private fun saveMediaStoreGeneration() {
@@ -171,26 +182,23 @@ class MainActivity : ComponentActivity() {
             }
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        when (requestCode) {
-            PermissionUtil.PERMISSION_REQUEST_CODE -> {
-                if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
-                    checkMediaScan()
-                } else {
-                        PermissionUtil.showDialogAndAsk(
-                            this,
-                            "",
-                            "This permission is needed for the app to function properly",
-                            { _, _ -> PermissionUtil.requestAllMissingPermissions(this) }
-                        )
-                }
-            }
+
+    private fun requestPermission() {
+        val requiredPermissions = mutableListOf(
+            android.Manifest.permission.READ_EXTERNAL_STORAGE
+        )
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
+            requiredPermissions.add(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        }
+        if (Build.VERSION.SDK_INT >= 28) {
+            requiredPermissions.add(android.Manifest.permission.FOREGROUND_SERVICE)
+        }
+        fun isPermissionAvailable(permission: String): Boolean = this.checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED
+        val missingPermissions = requiredPermissions.filter { isPermissionAvailable(it) }
+        if (missingPermissions.isEmpty()) {
+            permissionsGranted = true
+        } else {
+            permissionLauncher.launch(missingPermissions.toTypedArray())
         }
     }
 }

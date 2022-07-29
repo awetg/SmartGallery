@@ -12,5 +12,12 @@ class MyWorkerFactory @Inject constructor(private val galleryDatabase: GalleryDa
         appContext: Context,
         workerClassName: String,
         workerParameters: WorkerParameters
-    ): ListenableWorker = MediaScanWorker(appContext, workerParameters, galleryDatabase)
+    ): ListenableWorker ? {
+        return when(workerClassName) {
+            MediaScanWorker::class.java.name ->
+                MediaScanWorker(appContext, workerParameters, galleryDatabase)
+            else ->
+                null
+        }
+    }
 }

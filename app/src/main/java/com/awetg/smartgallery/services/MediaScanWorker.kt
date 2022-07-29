@@ -1,19 +1,30 @@
 package com.awetg.smartgallery.services
 
 import android.content.ContentUris
+import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
+import android.graphics.Bitmap
+import android.graphics.ImageDecoder
+import android.net.Uri
+import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
 import androidx.work.*
 import com.awetg.smartgallery.common.*
 import com.awetg.smartgallery.data.data.GalleryDatabase
 import com.awetg.smartgallery.data.entities.MediaItem
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.face.FaceDetection
+import com.google.mlkit.vision.face.FaceDetectorOptions
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 import java.util.*
 
 class MediaScanWorker @AssistedInject constructor(
@@ -28,7 +39,7 @@ class MediaScanWorker @AssistedInject constructor(
                 ?: Result.failure()
             val lastCount = inputData.getInt(DATA_INPUT_KEY_MEDIA_COUNT, 0)
 
-            val progress = "Starting Media Scan"
+            val progress = "Scanning media..."
             setForeground(createForegroundInfo(progress, id))
 
             when(type){
@@ -79,6 +90,62 @@ class MediaScanWorker @AssistedInject constructor(
             if (reSync) galleryDatabase.mediaItemDao.deleteAll()
 
             galleryDatabase.mediaItemDao.insertAll(mediaItems.toList())
+
+            val options = FaceDetectorOptions.Builder()
+                .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)
+                .build()
+            val detector = FaceDetection.getClient(options)
+            var detectedFaces = 0
+
+            val contentResolver = applicationContext.contentResolver
+            val getBitmap = if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                {uri: Uri -> ImageDecoder.decodeBitmap(ImageDecoder.createSource(applicationContext.contentResolver, uri))}
+            } else {
+                {uri: Uri -> MediaStore.Images.Media.getBitmap(contentResolver, uri) }
+            }
+
+            mediaItems.forEach {
+                val bitmap: Bitmap
+                try {
+                    bitmap = getBitmap(it.uri)
+                    val image = InputImage.fromFilePath(applicationContext, it.uri)
+                    val result = detector.process(image)
+                        .addOnSuccessListener { faces ->
+                            if (faces.isNotEmpty()) {
+                                detectedFaces += faces.size
+                                val face = faces.first()
+                                val rect = face.boundingBox
+//                                val rotY = face.headEulerAngleY // Head is rotated to the right rotY degrees
+//                                val rotZ = face.headEulerAngleZ // Head is tilted sideways rotZ degree
+                                var width = rect.width()
+                                var height = rect.height()
+                                val left = if (rect.left < 0) 0 else rect.left
+                                val top = if (rect.top < 0) 0 else rect.top
+                                if ( (left + width) > bitmap.width ){
+                                    width = bitmap.width - left
+                                }
+                                if ( (top + height ) > bitmap.height ){
+                                    height = bitmap.height - top
+                                }
+                                if (left < 0 || top < 0) {
+                                    Log.e("smartImagesWorker", "Negative rect")
+                                } else {
+                                val croppedBitmap = Bitmap.createBitmap( bitmap , left , top , width , height )
+                                if (savePhoto(it.mediaStoreId.toString(), croppedBitmap))
+                                    Log.d("smartImagesWorker", "Saved photo")
+                                }
+                            }
+                        }
+                        .addOnFailureListener { e ->
+                            Log.e("smartImagesWorker", "detector.process image failed")
+                            e.printStackTrace()
+                        }
+                } catch (e: Exception){
+                    Log.e("smartImagesWorker", "Failed to read bitmap image")
+                    e.printStackTrace()
+                }
+            }
+            Log.d("smartImagesWorker", "Faces detected: $detectedFaces")
 
             return mediaItems.count()
 
@@ -178,4 +245,39 @@ class MediaScanWorker @AssistedInject constructor(
         }
         return mediaItems.toList()
     }
+
+    private fun savePhoto(displayName: String, bitmap: Bitmap): Boolean {
+        val imageCollection = sdk29AndUp {
+            MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+        } ?: MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+
+        val contentValues = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, "$displayName.png")
+            put(MediaStore.Images.Media.MIME_TYPE, "image/png")
+            put(MediaStore.Images.Media.WIDTH, bitmap.width)
+            put(MediaStore.Images.Media.HEIGHT, bitmap.height)
+        }
+
+        return try {
+            applicationContext.contentResolver.insert(imageCollection, contentValues)?.also { uri ->
+                applicationContext.contentResolver.openOutputStream(uri).use { outputStream ->
+                    if (!bitmap.compress(Bitmap.CompressFormat.PNG, 90, outputStream)) {
+                        throw IOException("can't save bitmap")
+                    }
+                }
+            } ?: throw IOException("couldn't create MediaStore entry")
+            true
+        } catch (e: IOException) {
+            Log.e("smartImagesWorker", "Error saving photo")
+            e.printStackTrace()
+            false
+        }
+    }
+}
+
+
+inline fun <T> sdk29AndUp(onSdk29: () -> T): T? {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        onSdk29()
+    } else null
 }

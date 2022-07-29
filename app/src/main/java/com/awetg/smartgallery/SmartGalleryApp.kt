@@ -4,20 +4,13 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
-import android.net.Uri
 import android.os.Build
-import android.util.Log
-import androidx.work.*
+import androidx.work.Configuration
 import com.awetg.smartgallery.common.FOREGROUND_WORK_NOTIFICATION_CHANNEL_ID
 import com.awetg.smartgallery.common.util.SharedPreferenceUtil
 import com.awetg.smartgallery.data.data.GalleryDatabase
-import com.awetg.smartgallery.data.entities.MediaItem
-import com.awetg.smartgallery.domain.repository.MediaItemRepository
-import com.awetg.smartgallery.services.MediaScanWorker
 import com.awetg.smartgallery.services.MyWorkerFactory
 import dagger.hilt.android.HiltAndroidApp
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltAndroidApp
@@ -33,11 +26,6 @@ class SmartGalleryApp: Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
-        val u = Uri.parse("content://media/external/images/media/6307")
-        GlobalScope.launch {
-//        galleryDatabase.mediaItemDao.insertAll(listOf(MediaItem(null, "", "", "", -1, -1, -1, 0, 0, 1, u, 0, 0)))
-            galleryDatabase.mediaItemDao.getMediaItemsByPath("fds")
-        }
         val first = sharedPreferenceUtil.prefs.getBoolean(SharedPreferenceUtil.FIRST_APP_RUN_KEY, true)
         if (first) {
             createNotificationChannel(
