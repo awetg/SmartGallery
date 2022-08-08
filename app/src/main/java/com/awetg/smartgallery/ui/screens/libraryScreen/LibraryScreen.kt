@@ -1,13 +1,11 @@
 package com.awetg.smartgallery.ui.screens.libraryScreen
 
-import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.GridCells
 import androidx.compose.foundation.lazy.GridItemSpan
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Surface
@@ -19,7 +17,6 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -27,7 +24,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
 import com.awetg.smartgallery.data.entities.MediaItem
 import com.awetg.smartgallery.ui.screens.Screen
-import com.awetg.smartgallery.ui.screens.mediaViewerScreen.ViewerTopAppBar
 import com.awetg.smartgallery.ui.screens.photosScreen.PhotosViewModel
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -64,7 +60,7 @@ fun LibraryScreen(
             items(state.albums.count()) { i ->
                 AlbumThumbnailBox(state.albums.elementAt(i).first()) {
                     onImageClickNavigation(
-                        Screen.AlbumPhotosScreen.route + "?albumIndex=${i}"
+                        Screen.GroupedPhotosScreen.route + "?groupIndex=${i}"
                     )
                 }
             }

@@ -53,7 +53,7 @@ import kotlinx.coroutines.launch
 //            translateX.snapTo(translateX.value + dragChange.x)
 //            translateY.snapTo(translateY.value + dragChange.y)
 //            velocityTracker.addPosition(pointerInputChange.uptimeMillis, pointerInputChange.position)
-//            Log.d("smartImagesWorker","OnDrag-translateX: ${translateX.value}, OnDrag-translateY: ${translateY.value}")
+//            Log.d(LOG_TAG,"OnDrag-translateX: ${translateX.value}, OnDrag-translateY: ${translateY.value}")
 ////            offset += dragChange
 //        }
 //        }
@@ -123,7 +123,7 @@ import kotlinx.coroutines.launch
 //                        (constraints.maxWidth - placeable.width) / 2,
 //                        (constraints.maxHeight - placeable.height) / 2
 //                    ) {
-//                        Log.d("smartImagesWorker","translateX: ${translateX.value}, translateY: ${translateY.value}")
+//                        Log.d(LOG_TAG,"translateX: ${translateX.value}, translateY: ${translateY.value}")
 //                        scaleX = scale
 //                        scaleY = scale
 //                        translationX = translateX.value
@@ -176,7 +176,7 @@ import kotlinx.coroutines.launch
 //    var offset by remember { mutableStateOf(Offset.Zero) }
 //
 //    val transformableState = rememberTransformableState { zoomChange, panChange, _ ->
-////        Log.d("smartImagesWorker", "scale: $zoomChange")
+////        Log.d(LOG_TAG, "scale: $zoomChange")
 //        scale = scale.times(zoomChange).coerceIn(minScale, maxScale)
 //        if(scale > 1) {
 //            offset  += panChange.times(scale)
@@ -200,7 +200,7 @@ import kotlinx.coroutines.launch
 //                            val maxX = layout!!.size.width * (scale - 1) / 2f
 //                            val maxY = layout!!.size.height * (scale - 1) / 2f
 //                            val targetTranslation = (it.positionChange() + offset)
-//                            Log.d("smartImagesWorker", "Scale: $scale, maxX: $maxX, maxY: $maxY, targetTranslation: $targetTranslation")
+//                            Log.d(LOG_TAG, "Scale: $scale, maxX: $maxX, maxY: $maxY, targetTranslation: $targetTranslation")
 //                            if (targetTranslation.x > -maxX && targetTranslation.x < maxX &&
 //                                targetTranslation.y > -maxY && targetTranslation.y < maxY
 //                            ) {

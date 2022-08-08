@@ -106,7 +106,16 @@ dependencies {
     // zoomable image view
     implementation("com.mxalbert.zoomable:zoomable:1.4.1")
 
-    // bundle mlkit face detection model with app, 6.9MB size increase but model immediately available
+    // bundle ml kit face detection model with app, 6.9MB size increase but model immediately available
     implementation 'com.google.mlkit:face-detection:16.1.5'
+
+    // Tensorflow lite dependencies
+    implementation 'org.tensorflow:tensorflow-lite:2.9.0'
+    implementation 'org.tensorflow:tensorflow-lite-gpu:2.9.0'
+    // specifying version is not working for TensorFlow lite support library
+    implementation 'org.tensorflow:tensorflow-lite-support:+'
+
+    // kotlin coroutines for play services
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.6.4'
 
 }

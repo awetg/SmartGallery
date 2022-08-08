@@ -1,6 +1,5 @@
 package com.awetg.smartgallery.ui.screens.searchScreen
 
-import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -14,31 +13,34 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.rememberAsyncImagePainter
 import com.awetg.smartgallery.R
+import com.awetg.smartgallery.common.CLUSTER_GROUP
+import com.awetg.smartgallery.common.util.FileUtil
 import com.awetg.smartgallery.ui.screens.Screen
+import com.awetg.smartgallery.ui.screens.photosScreen.PhotosViewModel
 import com.awetg.smartgallery.ui.theme.SearchBarColor
 import com.awetg.smartgallery.ui.theme.AppBarTextColor
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SearchScreen(
-    onSearchBarClickNavigation: (String) -> Unit,
+    onItemClickNavigation: (String) -> Unit,
+    viewModel: PhotosViewModel = hiltViewModel()
 ) {
-    Log.d("smartImagesWorker", "SearchScreen draw")
+    val mlJobState = viewModel.mlJobState.value
+    val clusterUiState = viewModel.clusterUiState.value
 
     Column(
         modifier = Modifier
@@ -46,56 +48,48 @@ fun SearchScreen(
             .padding(16.dp, 0.dp)
     ) {
         LazyColumn {
-            stickyHeader {  SearchBar{onSearchBarClickNavigation(Screen.SearchResultScreen.route)} }
-            item {
-                Text(
-                    text = "Recent List",
-                    color = Color.Black,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
+            stickyHeader {  SearchBar{onItemClickNavigation(Screen.SearchResultScreen.route)} }
 
-            //Horizontal Scroll view
-            item {
-                LazyRow {
-                    items(count = 10) {
-                        Card(
-                            modifier = Modifier
-                                .width(110.dp)
-                                .height(120.dp)
-                                .padding(0.dp, 5.dp, 5.dp, 0.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(Color.White),
-                            elevation = 5.dp
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(5.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Image(
-                                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                                    contentDescription = "profile Image",
-                                    contentScale = ContentScale.Crop,
+            if (mlJobState.clusterJobComplete && clusterUiState.clusters.isNotEmpty()) {
+                item {
+                    Text(
+                        text = "People",
+                    )
+                }
+                //Horizontal Scroll view
+                item {
+                    LazyRow {
+                        items(clusterUiState.clusters.count()) { i ->
+                            val file = FileUtil.getClusterPhoto(LocalContext.current, clusterUiState.clusters.elementAt(i).first().clusterId)
+                            if (file != null) {
+                                Card(
                                     modifier = Modifier
-                                        .size(60.dp)
-                                        .clip(CircleShape)
-                                )
+                                        .width(88.dp)
+                                        .height(88.dp)
+                                        .padding(5.dp)
+                                        .clip(RoundedCornerShape(50))
+                                        .clickable {
+                                            onItemClickNavigation(
+                                                Screen.GroupedPhotosScreen.route + "?groupIndex=${i}&groupType=${CLUSTER_GROUP}"
+                                            )
+                                        },
+                                    elevation = 5.dp
+                                ) {
+                                    val imagePainterState = rememberAsyncImagePainter(file)
+                                    Image(
+                                        painter = imagePainterState,
+                                        contentDescription = "profile Image",
+                                        contentScale = ContentScale.FillWidth,
+                                    )
 
-                                Spacer(modifier = Modifier.padding(5.dp))
-
-                                Text(
-                                    text = "Test",
-                                    color = Color.Black,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp
-                                )
+                                    Spacer(modifier = Modifier.padding(5.dp))
+                                }
                             }
                         }
                     }
                 }
             }
+
 
             item {
                 Text(
@@ -161,9 +155,9 @@ fun SearchScreen(
 fun SearchBar(onClick: () -> Unit) {
     Box(
         Modifier
-            .padding(0.dp, 8.dp)
+            .padding(0.dp, 8.dp, 0.dp, 24.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(50))
+            .clip(RoundedCornerShape(40))
             .background(SearchBarColor)
             .clickable { onClick() },
         contentAlignment = Alignment.CenterStart,

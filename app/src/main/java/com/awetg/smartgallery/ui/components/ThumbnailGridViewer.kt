@@ -13,12 +13,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
+import com.awetg.smartgallery.common.ALBUM_GROUP
 import com.awetg.smartgallery.data.entities.MediaItem
 import com.awetg.smartgallery.ui.screens.Screen
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ThumbnailGridViewer(mediaItems:  List<MediaItem>, onImageClickNavigation: (String) -> Unit, albumIndex: Int) {
+fun ThumbnailGridViewer(mediaItems:  List<MediaItem>, onImageClickNavigation: (String) -> Unit, groupIndex: Int, groupType: String = ALBUM_GROUP) {
     Column(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -32,7 +33,7 @@ fun ThumbnailGridViewer(mediaItems:  List<MediaItem>, onImageClickNavigation: (S
             items(mediaItems.count()) { i ->
                 ThumbnailBox(mediaItems.elementAt(i)) {
                         onImageClickNavigation(
-                            Screen.MediaViewerScreen.route + "?mediaIndex=${i}&albumIndex=${albumIndex}"
+                            Screen.MediaViewerScreen.route + "?mediaIndex=${i}&groupIndex=${groupIndex}&groupType=${groupType}"
                         )
                 }
             }

@@ -13,6 +13,7 @@ sealed class Screen(val route: String, val title : String, val icon : ImageVecto
     object SearchScreen : Screen( route = "search_screen", title = "Search", icon= tabIcons.Search)
     object LibraryScreen : Screen(route = "library_screen", title = "Library", icon= tabIcons.List)
     object MediaViewerScreen: Screen(route = "media_viewer_screen", title = "Viewer", null)
-    object AlbumPhotosScreen: Screen(route = "album_photos_screen", title = "Photos", null)
-    object SearchResultScreen: Screen(route = "search_result_screen", title = "Search Result Screen", null)
+    object GroupedPhotosScreen: Screen(route = "grouped_photos_screen", title = "Photos", null)
+    object SearchResultScreen: Screen(route = "string_search_screen", title = "String Search Screen", null)
+//    object SearchResultScreen: Screen(route = "search_result_screen", title = "Search Result Screen", null)
 }

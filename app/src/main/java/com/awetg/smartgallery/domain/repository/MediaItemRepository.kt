@@ -11,4 +11,5 @@ interface MediaItemRepository {
     fun deleteMedia(mediaItem: MediaItem)
     fun deleteMediaItemsByPath(path: String)
     fun deleteAll()
+    fun updateClusterByIds(clusterId: Int, ids: List<Long>)
 }

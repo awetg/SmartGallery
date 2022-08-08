@@ -52,8 +52,8 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun providePhotosViewModel(photosUseCases: PhotosUseCases): PhotosViewModel {
-        return PhotosViewModel(photosUseCases)
+    fun providePhotosViewModel(photosUseCases: PhotosUseCases, sharedPreferenceUtil: SharedPreferenceUtil): PhotosViewModel {
+        return PhotosViewModel(photosUseCases, sharedPreferenceUtil)
     }
 
     @Singleton

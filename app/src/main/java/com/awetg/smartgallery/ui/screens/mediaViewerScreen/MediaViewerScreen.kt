@@ -1,6 +1,5 @@
 package com.awetg.smartgallery.ui.screens.mediaViewerScreen
 
-import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,7 +31,7 @@ fun MediaViewerScreen(
 ) {
     val showBars = rememberSaveable { (mutableStateOf(true)) }
     val pagerState = rememberPagerState(viewerArgument.mediaIndex)
-    val imageCount = viewModel.getMediaCount(viewerArgument.albumIndex)
+    val imageCount = viewModel.getMediaCount(viewerArgument.groupIndex, viewerArgument.groupType)
 
     Scaffold(
         backgroundColor = Color.Black,
@@ -45,7 +44,7 @@ fun MediaViewerScreen(
         bottomBar = { if (showBars.value) ViewerBottomBar() },
         content = {
             HorizontalPager(count = imageCount, state = pagerState) { page ->
-                val mediaItem = viewModel.getNextMediaItemUri(page, viewerArgument.albumIndex)
+                val mediaItem = viewModel.getNextMediaItemUri(page, viewerArgument.groupIndex, viewerArgument. groupType)
                 val state = rememberZoomableState(
                     minScale = 1f,
                     maxScale = 8f

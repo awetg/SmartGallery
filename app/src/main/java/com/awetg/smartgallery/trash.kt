@@ -27,7 +27,7 @@ import com.awetg.smartgallery.data.entities.MediaItem
 //        }
 //        thumbnail.asImageBitmap()
 //    } catch (e: IOException) {
-//        Log.e("smartImagesWorker", "getImageBitmap exception: ${e.message}")
+//        Log.e(LOG_TAG, "getImageBitmap exception: ${e.message}")
 //        null
 //    }
 //}

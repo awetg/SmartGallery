@@ -1,31 +1,19 @@
 package com.awetg.smartgallery.services
 
 import android.content.ContentUris
-import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
-import android.graphics.Bitmap
-import android.graphics.ImageDecoder
-import android.net.Uri
-import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
 import androidx.work.*
 import com.awetg.smartgallery.common.*
 import com.awetg.smartgallery.data.data.GalleryDatabase
 import com.awetg.smartgallery.data.entities.MediaItem
-import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.face.FaceDetection
-import com.google.mlkit.vision.face.FaceDetectorOptions
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
-import java.util.*
 
 class MediaScanWorker @AssistedInject constructor(
     @Assisted context: Context,
@@ -35,7 +23,7 @@ class MediaScanWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         return withContext(Dispatchers.IO) {
-            val type = inputData.getString(DATA_INPUT_KEY_WORK_TYPE)
+            val type = inputData.getString(DATA_INPUT_KEY_MEDIA_SCAN_TYPE)
                 ?: Result.failure()
             val lastCount = inputData.getInt(DATA_INPUT_KEY_MEDIA_COUNT, 0)
 
@@ -58,10 +46,13 @@ class MediaScanWorker @AssistedInject constructor(
 
                 }
                 MEDIA_SCAN_TYPE_UPDATE -> {
-                    val newCount = mediaStoreUpdate(lastCount)
-                    return@withContext Result.success(
-                        Data.Builder().putInt(DATA_OUTPUT_KEY_MEDIA_COUNT, newCount).build()
-                    )
+                    val mediaUpdate = mediaStoreUpdate(lastCount)
+                     val data = Data.Builder()
+                            .putLongArray(DATA_KEY_NEW_MEDIAS, mediaUpdate.newItems)
+                            .putLongArray(DATA_KEY_DELETED_MEDIAS, mediaUpdate.deletedItems)
+                            .putInt(DATA_OUTPUT_KEY_MEDIA_COUNT, mediaUpdate.count)
+                            .build()
+                    return@withContext Result.success(data)
 
                 }
                 else -> return@withContext Result.failure()
@@ -72,6 +63,7 @@ class MediaScanWorker @AssistedInject constructor(
 
     private fun fullMediaSync(reSync: Boolean): Int {
         try {
+
             var mediaItems = listOf<MediaItem>()
 
             val cursor = applicationContext.contentResolver.query(
@@ -85,77 +77,21 @@ class MediaScanWorker @AssistedInject constructor(
             cursor?.use {
                 if (it.count > 0) mediaItems =  getMediaItemsFromCursor(it)
             } ?: kotlin.run {
-                Log.e("smartImagesWorker", "Cursor is null!")
+                Log.e(LOG_TAG, "Cursor is null!")
             }
             if (reSync) galleryDatabase.mediaItemDao.deleteAll()
 
             galleryDatabase.mediaItemDao.insertAll(mediaItems.toList())
 
-            val options = FaceDetectorOptions.Builder()
-                .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)
-                .build()
-            val detector = FaceDetection.getClient(options)
-            var detectedFaces = 0
-
-            val contentResolver = applicationContext.contentResolver
-            val getBitmap = if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                {uri: Uri -> ImageDecoder.decodeBitmap(ImageDecoder.createSource(applicationContext.contentResolver, uri))}
-            } else {
-                {uri: Uri -> MediaStore.Images.Media.getBitmap(contentResolver, uri) }
-            }
-
-            mediaItems.forEach {
-                val bitmap: Bitmap
-                try {
-                    bitmap = getBitmap(it.uri)
-                    val image = InputImage.fromFilePath(applicationContext, it.uri)
-                    val result = detector.process(image)
-                        .addOnSuccessListener { faces ->
-                            if (faces.isNotEmpty()) {
-                                detectedFaces += faces.size
-                                val face = faces.first()
-                                val rect = face.boundingBox
-//                                val rotY = face.headEulerAngleY // Head is rotated to the right rotY degrees
-//                                val rotZ = face.headEulerAngleZ // Head is tilted sideways rotZ degree
-                                var width = rect.width()
-                                var height = rect.height()
-                                val left = if (rect.left < 0) 0 else rect.left
-                                val top = if (rect.top < 0) 0 else rect.top
-                                if ( (left + width) > bitmap.width ){
-                                    width = bitmap.width - left
-                                }
-                                if ( (top + height ) > bitmap.height ){
-                                    height = bitmap.height - top
-                                }
-                                if (left < 0 || top < 0) {
-                                    Log.e("smartImagesWorker", "Negative rect")
-                                } else {
-                                val croppedBitmap = Bitmap.createBitmap( bitmap , left , top , width , height )
-                                if (savePhoto(it.mediaStoreId.toString(), croppedBitmap))
-                                    Log.d("smartImagesWorker", "Saved photo")
-                                }
-                            }
-                        }
-                        .addOnFailureListener { e ->
-                            Log.e("smartImagesWorker", "detector.process image failed")
-                            e.printStackTrace()
-                        }
-                } catch (e: Exception){
-                    Log.e("smartImagesWorker", "Failed to read bitmap image")
-                    e.printStackTrace()
-                }
-            }
-            Log.d("smartImagesWorker", "Faces detected: $detectedFaces")
-
             return mediaItems.count()
 
         } catch (e: Exception) {
-            Log.e("smartImagesWorker", e.toString())
+            Log.e(LOG_TAG, e.toString())
             return 0
         }
     }
 
-    private suspend fun mediaStoreUpdate(lastCount: Int): Int {
+    private suspend fun mediaStoreUpdate(lastCount: Int): MediaUpdate {
         try {
             var mediaItems = listOf<MediaItem>()
 //            arrayOf(lastSync.toString())
@@ -171,7 +107,7 @@ class MediaScanWorker @AssistedInject constructor(
             cursor?.use {
                 if (it.count > 0) mediaItems =  getMediaItemsFromCursor(it)
             } ?: kotlin.run {
-                Log.e("smartImagesWorker", "Cursor is null!")
+                Log.e(LOG_TAG, "Cursor is null!")
             }
 
             if (mediaItems.count() != lastCount) {
@@ -179,19 +115,28 @@ class MediaScanWorker @AssistedInject constructor(
                 val currentItems = mediaItems.toHashSet()
 
                 val deletedItems = storedItems.minus(currentItems)
-                galleryDatabase.mediaItemDao.deleteMediaItems(deletedItems.toList())
+                var deletedItemsIds = longArrayOf()
+                if (deletedItems.isNotEmpty()) {
+                    galleryDatabase.mediaItemDao.deleteMediaItems(deletedItems.toList())
+                    deletedItemsIds = deletedItems.map { it.mediaStoreId }.toLongArray()
+                }
 
                 val newItems = currentItems.minus(storedItems)
-                galleryDatabase.mediaItemDao.insertAll(newItems.toList())
+                var newItemsIds = longArrayOf()
+                if (newItems.isNotEmpty()) {
+                    galleryDatabase.mediaItemDao.insertAll(newItems.toList())
+                    newItemsIds = newItems.map { it.mediaStoreId }.toLongArray()
+                }
 
-                return lastCount - deletedItems.count() + newItems.count()
+                val newCount =  lastCount - deletedItems.count() + newItems.count()
+                return MediaUpdate(lastCount, newItemsIds, deletedItemsIds)
             }
 
-            return lastCount
+            return MediaUpdate(lastCount, longArrayOf(), longArrayOf())
 
         } catch (e: Exception) {
-            Log.e("smartImagesWorker", e.toString())
-            return lastCount
+            Log.e(LOG_TAG, e.toString())
+            return MediaUpdate(lastCount, longArrayOf(), longArrayOf())
         }
     }
 
@@ -239,6 +184,7 @@ class MediaScanWorker @AssistedInject constructor(
                     uri = contentUri,
                     height = height,
                     width = width,
+                    clusterId = -1
                 )
                 mediaItems.add(mediaItem)
             }
@@ -246,38 +192,5 @@ class MediaScanWorker @AssistedInject constructor(
         return mediaItems.toList()
     }
 
-    private fun savePhoto(displayName: String, bitmap: Bitmap): Boolean {
-        val imageCollection = sdk29AndUp {
-            MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-        } ?: MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-
-        val contentValues = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, "$displayName.png")
-            put(MediaStore.Images.Media.MIME_TYPE, "image/png")
-            put(MediaStore.Images.Media.WIDTH, bitmap.width)
-            put(MediaStore.Images.Media.HEIGHT, bitmap.height)
-        }
-
-        return try {
-            applicationContext.contentResolver.insert(imageCollection, contentValues)?.also { uri ->
-                applicationContext.contentResolver.openOutputStream(uri).use { outputStream ->
-                    if (!bitmap.compress(Bitmap.CompressFormat.PNG, 90, outputStream)) {
-                        throw IOException("can't save bitmap")
-                    }
-                }
-            } ?: throw IOException("couldn't create MediaStore entry")
-            true
-        } catch (e: IOException) {
-            Log.e("smartImagesWorker", "Error saving photo")
-            e.printStackTrace()
-            false
-        }
-    }
-}
-
-
-inline fun <T> sdk29AndUp(onSdk29: () -> T): T? {
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-        onSdk29()
-    } else null
+    private inner class MediaUpdate(val count: Int, val newItems: LongArray, val deletedItems: LongArray)
 }

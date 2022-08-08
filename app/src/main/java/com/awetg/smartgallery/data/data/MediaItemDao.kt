@@ -30,4 +30,7 @@ interface MediaItemDao {
 
     @Query("DELETE FROM media")
     fun deleteAll()
+
+    @Query("UPDATE media SET cluster = :clusterId WHERE media_store_id IN (:ids)")
+    fun updateClusterByIds(clusterId: Int, ids: List<Long>)
 }

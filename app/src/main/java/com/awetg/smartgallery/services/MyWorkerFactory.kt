@@ -16,6 +16,8 @@ class MyWorkerFactory @Inject constructor(private val galleryDatabase: GalleryDa
         return when(workerClassName) {
             MediaScanWorker::class.java.name ->
                 MediaScanWorker(appContext, workerParameters, galleryDatabase)
+            FaceClusterWorker::class.java.name ->
+                FaceClusterWorker(appContext, workerParameters, galleryDatabase)
             else ->
                 null
         }

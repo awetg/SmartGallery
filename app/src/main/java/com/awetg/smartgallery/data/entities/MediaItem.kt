@@ -19,6 +19,7 @@ data class MediaItem(
     @ColumnInfo(name = "uri") var uri: Uri,
     @ColumnInfo(name = "height") var height: Int,
     @ColumnInfo(name = "width") var width: Int,
+    @ColumnInfo(name = "cluster") var clusterId: Int,
 ) {
     companion object {
         // media constants
@@ -28,6 +29,15 @@ data class MediaItem(
 
         //        val MediaTypes = listOf(MEDIA_TYPE_IMAGE, MEDIA_TYPE_GIF, MEDIA_TYPE_VIDEO)
 
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return when(other) {
+            is MediaItem -> {
+                this.mediaStoreId == other.mediaStoreId
+            }
+            else -> false
+        }
     }
 }
 

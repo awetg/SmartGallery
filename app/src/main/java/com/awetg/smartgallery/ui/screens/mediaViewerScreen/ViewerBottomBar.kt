@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.awetg.smartgallery.common.LOG_TAG
 
 sealed class ViewerActions(val title: String, val icon: ImageVector?) {
     object Share: ViewerActions("Share", Icons.Outlined.Share)
@@ -59,7 +60,7 @@ fun ViewerBottomBar() {
                 selectedContentColor = Color.White,
                 unselectedContentColor = Color.White,
                 onClick = {
-                    Log.d("smartImagesWorker", "Clicked Action: ${it.title}")
+                    Log.d(LOG_TAG, "Clicked Action: ${it.title}")
                 }
             )
         }
