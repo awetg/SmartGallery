@@ -19,10 +19,6 @@ import com.awetg.smartgallery.ui.components.BottomNavController
 import com.awetg.smartgallery.ui.screens.photosScreen.PhotosViewModel
 import com.awetg.smartgallery.ui.theme.SmartGalleryTheme
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 

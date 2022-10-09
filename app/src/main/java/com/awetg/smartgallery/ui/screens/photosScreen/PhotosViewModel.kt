@@ -39,14 +39,14 @@ class PhotosViewModel @Inject constructor(private val photosUseCases: PhotosUseC
     private var getMediaClusterJob: Job? = null
 
     init {
-        getMediaItems()
+        getMediaItemsByModifiedAt()
     }
 
-    private fun getMediaItems() {
+    private fun getMediaItemsByModifiedAt() {
         getMediaItemsJob?.cancel()
         getMediaItemsJob = viewModelScope.launch {
             try {
-                val mediaItemsFlow = photosUseCases.getMediaItems()
+                val mediaItemsFlow = photosUseCases.getMediaItemsByModifiedAt()
                 val mediaItems = mediaItemsFlow.first()
 //                    val mediaItems = mediaItemsFlow.flatMapConcat { it.asFlow() }.toList()
                 photosUiState.value =
@@ -74,7 +74,7 @@ class PhotosViewModel @Inject constructor(private val photosUseCases: PhotosUseC
     }
 
     fun reloadMediaItems() {
-        getMediaItems()
+        getMediaItemsByModifiedAt()
     }
 
     fun getNextMediaItemUri(mediaIndex: Int, groupIndex: Int, groupType: String): MediaItem? {
@@ -135,7 +135,7 @@ class PhotosViewModel @Inject constructor(private val photosUseCases: PhotosUseC
 
     fun addItems(mediaItems: ArrayList<MediaItem>) {
         viewModelScope.launch(Dispatchers.IO) {
-            photosUseCases.addMediaItems(mediaItems).also { getMediaItems() }
+            photosUseCases.addMediaItems(mediaItems).also { getMediaItemsByModifiedAt() }
         }
     }
 

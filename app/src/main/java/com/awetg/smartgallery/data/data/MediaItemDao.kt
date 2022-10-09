@@ -7,10 +7,13 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface MediaItemDao {
 
-    @Query("SELECT * FROM media ORDER BY modified_at DESC")
+    @Query("SELECT * FROM media WHERE deleted_at = -1")
     fun getMediaItems(): Flow<List<MediaItem>>
 
-    @Query("SELECT * FROM media WHERE deleted_at =0 AND parent_path = :path COLLATE NOCASE")
+    @Query("SELECT * FROM media WHERE deleted_at = -1 ORDER BY modified_at DESC")
+    fun getMediaItemsByModifiedAt(): Flow<List<MediaItem>>
+
+    @Query("SELECT * FROM media WHERE deleted_at = -1 AND parent_path = :path COLLATE NOCASE")
     fun getMediaItemsByPath(path: String): Flow<List<MediaItem>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

@@ -111,7 +111,7 @@ class MediaScanWorker @AssistedInject constructor(
             }
 
             if (mediaItems.count() != lastCount) {
-                val storedItems = galleryDatabase.mediaItemDao.getMediaItems().first().toHashSet()
+                val storedItems = galleryDatabase.mediaItemDao.getMediaItemsByModifiedAt().first().toHashSet()
                 val currentItems = mediaItems.toHashSet()
 
                 val deletedItems = storedItems.minus(currentItems)

@@ -24,8 +24,8 @@ data class MediaItem(
     companion object {
         // media constants
         const val MEDIA_TYPE_IMAGE = 1
-        const val MEDIA_TYPE_GIF = 2
-        const val MEDIA_TYPE_VIDEO = 3
+//        const val MEDIA_TYPE_GIF = 2
+//        const val MEDIA_TYPE_VIDEO = 3
 
         //        val MediaTypes = listOf(MEDIA_TYPE_IMAGE, MEDIA_TYPE_GIF, MEDIA_TYPE_VIDEO)
 

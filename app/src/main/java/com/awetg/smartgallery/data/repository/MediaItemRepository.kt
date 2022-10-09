@@ -10,6 +10,10 @@ class MediaItemRepositoryImpl(private val dao: MediaItemDao): MediaItemRepositor
         return dao.getMediaItems()
     }
 
+    override fun getMediaItemsByModifiedAt(): Flow<List<MediaItem>> {
+        return dao.getMediaItemsByModifiedAt()
+    }
+
     override fun getMediaItemsByPath(path: String): Flow<List<MediaItem>> {
         return dao.getMediaItemsByPath(path)
     }

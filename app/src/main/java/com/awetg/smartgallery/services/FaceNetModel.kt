@@ -24,7 +24,7 @@ class FaceNetModel(private val context: Context, assetName: String) {
         NnApiDelegate()
     }
 
-    private val interpreter by lazy {
+    private val tflite by lazy {
         Interpreter(
             FileUtil.loadMappedFile(context, assetName),
             Interpreter.Options().addDelegate(nnApiDelegate)
@@ -56,22 +56,25 @@ class FaceNetModel(private val context: Context, assetName: String) {
             imageTensorProcessor.process(TensorImage.fromBitmap(bitmap)).buffer
 
         } else {
-            val bitmapARGB_8888 = bitmap.copy(Bitmap.Config.ARGB_8888, true)
-            imageTensorProcessor.process(TensorImage.fromBitmap(bitmapARGB_8888)).buffer
+            val bitmapARGB8888 = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+            imageTensorProcessor.process(TensorImage.fromBitmap(bitmapARGB8888)).buffer
 
         }
     }
 
     private fun runFaceNet(inputs: Any): Array<FloatArray> {
         val faceNetModelOutputs = Array(1) { FloatArray(128) }
-        interpreter.run(inputs, faceNetModelOutputs)
+        tflite.run(inputs, faceNetModelOutputs)
         return faceNetModelOutputs
 
     }
 
     suspend fun getEmbedding(bitmap: Bitmap): FloatArray {
         return withContext( Dispatchers.Default ) {
-            return@withContext runFaceNet( convertBitmapToBuffer( bitmap ))[0]
+            val bitmapBuffer = convertBitmapToBuffer( bitmap )
+            val embeddingOutput = Array(1) { FloatArray(128) }
+            tflite.run(bitmapBuffer, embeddingOutput)
+            return@withContext embeddingOutput[0]
         }
     }
 }

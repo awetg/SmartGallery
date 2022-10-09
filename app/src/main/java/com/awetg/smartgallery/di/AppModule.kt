@@ -2,16 +2,12 @@ package com.awetg.smartgallery.di
 
 import android.app.Application
 import android.content.Context
-import android.util.Log
 import androidx.room.Room
 import com.awetg.smartgallery.common.util.SharedPreferenceUtil
 import com.awetg.smartgallery.data.data.GalleryDatabase
 import com.awetg.smartgallery.data.repository.MediaItemRepositoryImpl
 import com.awetg.smartgallery.domain.repository.MediaItemRepository
-import com.awetg.smartgallery.domain.use_case.AddMediaItemsUseCase
-import com.awetg.smartgallery.domain.use_case.DeleteAllMediaItemsUseCase
-import com.awetg.smartgallery.domain.use_case.GetMediaItemsUseCase
-import com.awetg.smartgallery.domain.use_case.PhotosUseCases
+import com.awetg.smartgallery.domain.use_case.*
 import com.awetg.smartgallery.ui.screens.photosScreen.PhotosViewModel
 import dagger.Module
 import dagger.Provides
@@ -45,6 +41,7 @@ object AppModule {
     fun providePhotosUseCases(repository: MediaItemRepository): PhotosUseCases {
         return PhotosUseCases(
             getMediaItems = GetMediaItemsUseCase(repository),
+            getMediaItemsByModifiedAt = GetMediaItemsByModifiedAtUseCase(repository),
             addMediaItems = AddMediaItemsUseCase(repository),
             deleteAllMediaItems = DeleteAllMediaItemsUseCase(repository)
         )

@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface MediaItemRepository {
     fun getMediaItems(): Flow<List<MediaItem>>
+    fun getMediaItemsByModifiedAt(): Flow<List<MediaItem>>
     fun getMediaItemsByPath(path: String): Flow<List<MediaItem>>
     fun insert(mediaItem: MediaItem)
     fun insertAll(mediaItem: List<MediaItem>)

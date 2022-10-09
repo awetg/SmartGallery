@@ -1,7 +1,6 @@
 package com.awetg.smartgallery.services
 
 import android.content.Context
-import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
@@ -14,6 +13,7 @@ import com.awetg.smartgallery.data.data.GalleryDatabase
 import com.google.mlkit.vision.common.InputImage
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
@@ -23,7 +23,7 @@ import java.io.IOException
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 import java.lang.NumberFormatException
-import java.util.HashMap
+import java.util.*
 import kotlin.math.absoluteValue
 
 class FaceClusterWorker @AssistedInject constructor(
@@ -35,32 +35,46 @@ class FaceClusterWorker @AssistedInject constructor(
     private val faceDetector = MLKitFaceDetector()
     private val faceNetModel = FaceNetModel(applicationContext, FACE_NET_ASSET_NAME)
 
+    private val encodingHashMap = HashMap<String, FloatArray>()
+    private val faceAlignmentMap = HashMap<String, Float>()
+    private var lastProcessedMediaItemId = -1L
+
     override suspend fun doWork(): Result {
-        return withContext(Dispatchers.IO) {
-            val jobType = inputData.getString(DATA_INPUT_KEY_FACE_CLUSTER_TYPE)
-                ?: Result.failure()
+        try {
+            return withContext(Dispatchers.IO) {
+                val jobType = inputData.getString(DATA_INPUT_KEY_FACE_CLUSTER_TYPE)
+                    ?: Result.failure()
 
-            val progress = "Processing media..."
-            setForeground(createForegroundInfo(progress, id))
+                val progress = "Processing media..."
+                setForeground(createForegroundInfo(progress, id))
 
-            when(jobType) {
-                FACE_CLUSTER_JOB_ALL -> {
-                    if(clusterFaceForAllMedia())
+                when (jobType) {
+                    FACE_CLUSTER_JOB_ALL -> {
+                        if (clusterFaceForAllMedia())
+                            return@withContext Result.success()
+                        else
+                            return@withContext Result.failure()
+                    }
+                    FACE_CLUSTER_JOB_UPDATE -> {
+                        val newItemsIds =
+                            inputData.getLongArray(DATA_KEY_NEW_MEDIAS) ?: longArrayOf()
+                        val deletedItemsIds =
+                            inputData.getLongArray(DATA_KEY_DELETED_MEDIAS) ?: longArrayOf()
+                        updateCluster(newItemsIds, deletedItemsIds)
                         return@withContext Result.success()
-                    else
-                        return@withContext Result.failure()
+                    }
+                    // TODO: implement partial face clustering when media count more than 400
+                    FACE_CLUSTER_JOB_PARTIAL -> return@withContext Result.failure()
+                    else -> return@withContext Result.failure()
                 }
-                FACE_CLUSTER_JOB_UPDATE -> {
-                    val newItemsIds = inputData.getLongArray(DATA_KEY_NEW_MEDIAS) ?: longArrayOf()
-                    val deletedItemsIds = inputData.getLongArray(DATA_KEY_DELETED_MEDIAS) ?: longArrayOf()
-                    updateCluster(newItemsIds, deletedItemsIds)
-                    return@withContext Result.success()
-                }
-                // TODO: implement partial face clustering when media count more than 500
-                FACE_CLUSTER_JOB_PARTIAL -> return@withContext Result.failure()
-                else -> return@withContext Result.failure()
-            }
 
+            }
+        } catch (e: Exception) {
+            if (encodingHashMap.isNotEmpty() && lastProcessedMediaItemId != -1L) {
+                saveEncodingsToFile()
+                saveFaceAlignmentsToFile()
+            }
+            return Result.failure()
         }
     }
 
@@ -76,12 +90,9 @@ class FaceClusterWorker @AssistedInject constructor(
         FileUtil.createDirInExternalStorageCache(applicationContext, FACES_DIR)
         FileUtil.createDirInExternalStorage(applicationContext, CLUSTER_DIR)
 
-        val mediaItems = galleryDatabase.mediaItemDao.getMediaItems().first()
+        val mediaItems = galleryDatabase.mediaItemDao.getMediaItemsByModifiedAt().first()
 
-        val encodingHashMap = HashMap<String, FloatArray>()
-        val faceAlignmentMap = mutableMapOf<String, Float>()
-
-        mediaItems.take(50).forEach { mediaItem ->
+        mediaItems.take(100).forEach { mediaItem ->
             try {
                 val mediaItemBitmap = this.getBitmap(mediaItem.uri)
                 val inputImage = InputImage.fromFilePath(applicationContext, mediaItem.uri)
@@ -96,6 +107,7 @@ class FaceClusterWorker @AssistedInject constructor(
                             val alignmentValue = face.headEulerAngleY.absoluteValue + face.headEulerAngleX.absoluteValue + face.headEulerAngleZ.absoluteValue
                             faceAlignmentMap[mapKey] = alignmentValue
                             FileUtil.savePhotoToExternalStorageCache(applicationContext, faceBitmap, "$FACES_DIR/$mapKey.png")
+                            lastProcessedMediaItemId = mediaItem.id!!
                         }
                     }
                 } else {
@@ -138,22 +150,26 @@ class FaceClusterWorker @AssistedInject constructor(
 
     }
 
-    private fun saveEncodingsToFile(encodingHashMap: HashMap<String, FloatArray>) {
+    private fun saveObjectToFile(obj: Any, fileName: String) {
         try {
-            applicationContext.openFileOutput("encoding", Context.MODE_PRIVATE).use {
+            applicationContext.openFileOutput(fileName, Context.MODE_PRIVATE).use {
                 val objectOutputStream = ObjectOutputStream(it)
-                objectOutputStream.writeObject(encodingHashMap)
+                objectOutputStream.writeObject(obj)
                 objectOutputStream.flush()
                 objectOutputStream.close()
                 it.close()
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            Log.d(LOG_TAG, "error saving encoding hash map to file")
+            Log.d(LOG_TAG, "error saving object to file")
         }
     }
 
-    private fun readEncodingsToFile(): HashMap<String, FloatArray>? {
+    private fun saveEncodingsToFile() {
+        saveObjectToFile(encodingHashMap, "encoding")
+    }
+
+    private fun readEncodingsFromFile(): HashMap<String, FloatArray>? {
         try {
             applicationContext.openFileInput("encoding").use {
                 val objectInputStream = ObjectInputStream(it)
@@ -164,7 +180,27 @@ class FaceClusterWorker @AssistedInject constructor(
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            Log.d(LOG_TAG, "error saving encoding hash map to file")
+            Log.d(LOG_TAG, "error reading encoding hash map from file")
+            return null
+        }
+    }
+
+    private fun saveFaceAlignmentsToFile() {
+        saveObjectToFile(faceAlignmentMap, "alignment")
+    }
+
+    private fun readFaceAlignmentFromFile(): HashMap<String, Float>? {
+        try {
+            applicationContext.openFileInput("alignment").use {
+                val objectInputStream = ObjectInputStream(it)
+                val faceAlignmentMap: HashMap<String, Float> = objectInputStream.readObject() as HashMap<String, Float>
+                objectInputStream.close()
+                it.close()
+                return faceAlignmentMap
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Log.d(LOG_TAG, "error reading encoding hash map from file")
             return null
         }
     }
