@@ -23,6 +23,9 @@ class SharedPreferenceUtil @Inject constructor(@ApplicationContext context : Con
         const val MEDIA_STORE_GENERATION_KEY = "media_generation"
 
         const val CLUSTER_JOB_COMPLETE = "cluster_job_complete"
+
+        const val CLASSIFICATION_JOB_COMPLETE = "classification_job_complete"
+
     }
 
     fun saveBoolean(keyName: String, value: Boolean) {

@@ -13,4 +13,5 @@ interface MediaItemRepository {
     fun deleteMediaItemsByPath(path: String)
     fun deleteAll()
     fun updateClusterByIds(clusterId: Int, ids: List<Long>)
+    fun getMediaItemsByIds(ids: List<Long>): Flow<List<MediaItem>>
 }

@@ -42,4 +42,8 @@ class MediaItemRepositoryImpl(private val dao: MediaItemDao): MediaItemRepositor
         dao.updateClusterByIds(clusterId, ids)
     }
 
+    override fun getMediaItemsByIds(ids: List<Long>): Flow<List<MediaItem>> {
+        return dao.getMediaItemsByIds(ids)
+    }
+
 }

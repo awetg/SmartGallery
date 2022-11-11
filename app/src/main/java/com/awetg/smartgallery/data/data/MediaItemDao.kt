@@ -36,4 +36,7 @@ interface MediaItemDao {
 
     @Query("UPDATE media SET cluster = :clusterId WHERE media_store_id IN (:ids)")
     fun updateClusterByIds(clusterId: Int, ids: List<Long>)
+
+    @Query("SELECT * FROM media WHERE id IN (:ids) AND deleted_at = -1")
+    fun getMediaItemsByIds(ids: List<Long>): Flow<List<MediaItem>>
 }

@@ -118,4 +118,11 @@ dependencies {
     // kotlin coroutines for play services
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.6.4'
 
+    // pytorch dependency
+//    implementation 'org.pytorch:pytorch_android_lite:1.12.2' // main dependency with PyTorch Android API
+    // additional library with utility functions for converting android.media.Image and android.graphics.Bitmap to tensors
+//    implementation 'org.pytorch:pytorch_android_torchvision_lite:1.12.2'
+    implementation 'org.pytorch:pytorch_android_lite:1.10.0'
+    implementation 'org.pytorch:pytorch_android_torchvision_lite:1.10.0'
+
 }

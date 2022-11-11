@@ -9,7 +9,7 @@ import androidx.work.Configuration
 import com.awetg.smartgallery.common.FOREGROUND_WORK_NOTIFICATION_CHANNEL_ID
 import com.awetg.smartgallery.common.util.SharedPreferenceUtil
 import com.awetg.smartgallery.data.data.GalleryDatabase
-import com.awetg.smartgallery.services.MyWorkerFactory
+import com.awetg.smartgallery.services.workers.MyWorkerFactory
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 

@@ -13,10 +13,12 @@ import androidx.compose.runtime.Composable
 import androidx.work.*
 import com.awetg.smartgallery.common.*
 import com.awetg.smartgallery.common.util.SharedPreferenceUtil
-import com.awetg.smartgallery.services.FaceClusterWorker
-import com.awetg.smartgallery.services.MediaScanWorker
+import com.awetg.smartgallery.services.workers.FaceClusterWorker
+import com.awetg.smartgallery.services.workers.MediaScanWorker
+import com.awetg.smartgallery.services.workers.YoloObjectDetectionWorker
 import com.awetg.smartgallery.ui.components.BottomNavController
 import com.awetg.smartgallery.ui.screens.photosScreen.PhotosViewModel
+import com.awetg.smartgallery.ui.screens.searchScreen.SearchViewModel
 import com.awetg.smartgallery.ui.theme.SmartGalleryTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -26,7 +28,9 @@ import javax.inject.Inject
 class MainActivity : ComponentActivity() {
 
     @Inject
-    lateinit var viewModel: PhotosViewModel
+    lateinit var photosViewModel: PhotosViewModel
+    @Inject
+    lateinit var searchViewModel: SearchViewModel
     @Inject
     lateinit var sharedPreferenceUtil: SharedPreferenceUtil
 
@@ -111,122 +115,129 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun checkMediaScan() {
-
-        val onSuccess = { newCount: Int, _: LongArray?, _: LongArray? ->
-            sharedPreferenceUtil.updateMediaCount(newCount)
-            enqueueFaceClusterWorker(FACE_CLUSTER_JOB_ALL, null, null)
-        }
-        val onFailure = { }
-        val onCancel = { }
-        val onFinnish = { }
-
-        val onSuccessForUpdate = { newCount: Int, newItemsIds: LongArray?, deletedItemsIds: LongArray? ->
-            sharedPreferenceUtil.updateMediaCount(newCount)
-            enqueueFaceClusterWorker(FACE_CLUSTER_JOB_UPDATE, newItemsIds, deletedItemsIds)
-        }
-
         when(getMediaScanType()) {
             MEDIA_SCAN_TYPE_SYNC -> {
-                val data = Data.Builder()
-                    .putString(DATA_INPUT_KEY_MEDIA_SCAN_TYPE, MEDIA_SCAN_TYPE_SYNC)
-                    .build()
-                val mWorkRequest: WorkRequest =
-                    OneTimeWorkRequest.Builder(MediaScanWorker::class.java)
-                        .setInputData(data)
-                        .build()
-                enqueueMediaScanWorker(mWorkRequest, onSuccess, onFailure, onCancel) {
-                    onFinnish()
-                    viewModel.reloadMediaItems()
-                }
+                val newJobData = JobData(MEDIA_SCAN_TYPE_SYNC, MediaScanWorker::class.java)
+                enqueueWorker(newJobData, mediaScanObserver)
             }
             MEDIA_SCAN_TYPE_RE_SYNC -> {
-                val data = Data.Builder()
-                    .putString(DATA_INPUT_KEY_MEDIA_SCAN_TYPE, MEDIA_SCAN_TYPE_RE_SYNC)
-                    .build()
-                val mWorkRequest: WorkRequest =
-                    OneTimeWorkRequest.Builder(MediaScanWorker::class.java)
-                        .setInputData(data)
-                        .build()
-                enqueueMediaScanWorker(mWorkRequest, onSuccess, onFailure, onCancel) {
-                    onFinnish()
-                    viewModel.reloadMediaItems()
-                }
+                val newJobData = JobData(MEDIA_SCAN_TYPE_SYNC, MediaScanWorker::class.java)
+                enqueueWorker(newJobData, mediaScanObserver)
             }
             MEDIA_SCAN_TYPE_UPDATE -> {
-                val lastModifiedAt = sharedPreferenceUtil.prefs.getInt(SharedPreferenceUtil.MEDIA_STORE_MEDIA_COUNT, 0)
-                val data = Data.Builder()
-                    .putString(DATA_INPUT_KEY_MEDIA_SCAN_TYPE, MEDIA_SCAN_TYPE_UPDATE)
-                    .putInt(DATA_INPUT_KEY_MEDIA_COUNT, lastModifiedAt)
-                    .build()
-                val mWorkRequest: WorkRequest =
-                    OneTimeWorkRequest.Builder(MediaScanWorker::class.java)
-                        .setInputData(data)
-                        .build()
-                enqueueMediaScanWorker(mWorkRequest, onSuccessForUpdate, onFailure, onCancel) {
-                    onFinnish()
-                    viewModel.reloadMediaItems()
-                }
+                val lastCount = sharedPreferenceUtil.prefs.getInt(SharedPreferenceUtil.MEDIA_STORE_MEDIA_COUNT, 0)
+                val newJobData = JobData(MEDIA_SCAN_TYPE_SYNC, MediaScanWorker::class.java, lastCount =  lastCount)
+                enqueueWorker(newJobData, mediaScanObserver)
             }
         }
     }
 
-    private fun enqueueMediaScanWorker(workerRequest: WorkRequest, onSuccess: (Int, LongArray?, LongArray?) -> Unit, onFailure: () -> Unit, onCancel: () -> Unit, onFinnish: () -> Unit) {
-        WorkManager.getInstance(this).enqueue(workerRequest)
-        WorkManager.getInstance(this).getWorkInfoByIdLiveData(workerRequest.id)
-            .observe(this) { workInfo ->
-                when (workInfo?.state) {
-                    WorkInfo.State.SUCCEEDED -> {
-                        val newCount = workInfo.outputData.getInt(
-                            DATA_OUTPUT_KEY_MEDIA_COUNT, 0
-                        )
-                        val newItemsIds = workInfo.outputData.getLongArray(
-                            DATA_OUTPUT_KEY_MEDIA_COUNT
-                        )
-                        val deletedItemsIds = workInfo.outputData.getLongArray(
-                            DATA_OUTPUT_KEY_MEDIA_COUNT
-                        )
-                        onSuccess(newCount, newItemsIds, deletedItemsIds)
-                    }
-                    WorkInfo.State.FAILED -> onFailure()
-                    WorkInfo.State.CANCELLED -> onCancel()
-                    else ->
-                        Log.d(LOG_TAG, "Running Media Scan")
-                }
-                if (workInfo.state.isFinished) onFinnish()
-            }
-    }
-
-    private fun enqueueFaceClusterWorker(jobType: String, newItemsIds: LongArray?, deletedItemsIds: LongArray?) {
+    private fun enqueueWorker(jobData: JobData, observerFunc: (workInfo: WorkInfo, jobData: JobData) -> Unit) {
+        Log.d(LOG_TAG, "enqueue job type: ${jobData.jobType}, class: ${jobData.worker}")
         val dataBuilder = Data.Builder()
-            .putString(DATA_INPUT_KEY_FACE_CLUSTER_TYPE, jobType)
+            .putString(DATA_INPUT_KEY_JOB_TYPE, jobData.jobType)
 
-        if (jobType == FACE_CLUSTER_JOB_UPDATE) {
-            newItemsIds?.also {  dataBuilder.putLongArray(DATA_KEY_NEW_MEDIAS, it) }
-            deletedItemsIds?.also { dataBuilder.putLongArray(DATA_KEY_DELETED_MEDIAS, it) }
+        if (jobData.jobType == JOB_TYPE_UPDATE) {
+            jobData.newItemsIds?.also {  dataBuilder.putLongArray(DATA_KEY_NEW_MEDIAS, it) }
+            jobData.deletedItemsIds?.also { dataBuilder.putLongArray(DATA_KEY_DELETED_MEDIAS, it) }
+        }
+        if (jobData.lastCount !== null) {
+            dataBuilder.putInt(DATA_INPUT_KEY_MEDIA_COUNT, jobData.lastCount)
         }
         val data = dataBuilder.build()
         val workerRequest: WorkRequest =
-            OneTimeWorkRequest.Builder(FaceClusterWorker::class.java)
+            OneTimeWorkRequest.Builder(jobData.worker)
                 .setInputData(data)
                 .build()
         WorkManager.getInstance(this).enqueue(workerRequest)
         WorkManager.getInstance(this).getWorkInfoByIdLiveData(workerRequest.id)
-            .observe(this) { workInfo ->
-                when (workInfo?.state) {
-                    WorkInfo.State.SUCCEEDED -> {
-                        Log.d(LOG_TAG, "Face cluster succeeded")
-                        sharedPreferenceUtil.saveBoolean(SharedPreferenceUtil.CLUSTER_JOB_COMPLETE, true)
-                        viewModel.updateMLJobState()
-                    }
-                    WorkInfo.State.FAILED -> Log.d(LOG_TAG, "Face cluster failed")
-                    WorkInfo.State.CANCELLED -> Log.d(LOG_TAG, "Face cluster cancelled")
-                    else ->
-                        Log.d(LOG_TAG, "Running face cluster")
-                }
-                if (workInfo.state.isFinished) {
-                    Log.d(LOG_TAG, "Face cluster finished")
+            .observe(this) { workInfo -> workInfo?.also { observerFunc(workInfo, jobData) }}
+    }
+
+    private val mediaScanObserver = {workInfo: WorkInfo, jobData: JobData ->
+        when (workInfo.state) {
+            WorkInfo.State.SUCCEEDED -> {
+                Log.d(LOG_TAG, "Media scan succeeded")
+                val newCount = workInfo.outputData.getInt(
+                    DATA_OUTPUT_KEY_MEDIA_COUNT, 0
+                )
+                sharedPreferenceUtil.updateMediaCount(newCount)
+                if (jobData.jobType == MEDIA_SCAN_TYPE_UPDATE) {
+                    val newItemsIds = workInfo.outputData.getLongArray(
+                        DATA_OUTPUT_KEY_MEDIA_COUNT
+                    )
+                    val deletedItemsIds = workInfo.outputData.getLongArray(
+                        DATA_OUTPUT_KEY_MEDIA_COUNT
+                    )
+                    val newJobData = JobData(JOB_TYPE_UPDATE, YoloObjectDetectionWorker::class.java, newItemsIds, deletedItemsIds)
+                    enqueueWorker(newJobData, objectDetectorObserver)
+                } else {
+                    val newJobData = jobData.copy(jobType = JOB_TYPE_ALL, worker = YoloObjectDetectionWorker::class.java)
+                    enqueueWorker(newJobData, objectDetectorObserver)
                 }
             }
+            WorkInfo.State.FAILED -> Log.d(LOG_TAG, "Media scan failed")
+            WorkInfo.State.CANCELLED -> Log.d(LOG_TAG, "Media scan cancelled")
+            else ->
+                Log.d(LOG_TAG, "Running Media Scan")
+        }
+        if (workInfo.state.isFinished) {
+            Log.d(LOG_TAG, "Media scan finished")
+            photosViewModel.reloadMediaItems()
+        }
+    }
+
+    private val objectDetectorObserver = { workInfo: WorkInfo, jobData: JobData ->
+        when (workInfo.state) {
+            WorkInfo.State.SUCCEEDED -> {
+                Log.d(LOG_TAG, "Object detector succeeded")
+                sharedPreferenceUtil.saveBoolean(SharedPreferenceUtil.CLASSIFICATION_JOB_COMPLETE, true)
+                searchViewModel.updateClassificationState()
+                val newJobData = jobData.copy(worker = FaceClusterWorker::class.java)
+                enqueueWorker(newJobData, faceClusterObserver)
+            }
+            WorkInfo.State.FAILED -> Log.d(LOG_TAG, "Object detector failed")
+            WorkInfo.State.CANCELLED -> Log.d(LOG_TAG, "Object detector cancelled")
+            else ->
+                Log.d(LOG_TAG, "Running media object detection")
+        }
+        if (workInfo.state.isFinished) {
+            Log.d(LOG_TAG, "Object detector finished")
+        }
+    }
+
+    private val classifierObserver = { workInfo: WorkInfo, jobData: JobData ->
+        when (workInfo.state) {
+            WorkInfo.State.SUCCEEDED -> {
+                Log.d(LOG_TAG, "Media classification succeeded")
+                sharedPreferenceUtil.saveBoolean(SharedPreferenceUtil.CLASSIFICATION_JOB_COMPLETE, true)
+                searchViewModel.updateClassificationState()
+//                val newJobData = jobData.copy(worker = FaceClusterWorker::class.java)
+//                enqueueWorker(newJobData, faceClusterObserver)
+            }
+            WorkInfo.State.FAILED -> Log.d(LOG_TAG, "Media classification failed")
+            WorkInfo.State.CANCELLED -> Log.d(LOG_TAG, "Media classification cancelled")
+            else ->
+                Log.d(LOG_TAG, "Running media classification")
+        }
+        if (workInfo.state.isFinished) {
+            Log.d(LOG_TAG, "Media classification finished")
+        }
+    }
+
+    private val faceClusterObserver = { workInfo: WorkInfo, _: JobData ->
+        when (workInfo.state) {
+            WorkInfo.State.SUCCEEDED -> {
+                Log.d(LOG_TAG, "Face cluster succeeded")
+                sharedPreferenceUtil.saveBoolean(SharedPreferenceUtil.CLUSTER_JOB_COMPLETE, true)
+                photosViewModel.updateMLJobState()
+            }
+            WorkInfo.State.FAILED -> Log.d(LOG_TAG, "Face cluster failed")
+            WorkInfo.State.CANCELLED -> Log.d(LOG_TAG, "Face cluster cancelled")
+            else ->
+                Log.d(LOG_TAG, "Running face cluster")
+        }
+        if (workInfo.state.isFinished) { Log.d(LOG_TAG, "Face cluster finished") }
     }
 
 
@@ -249,6 +260,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+data class JobData(
+    val jobType: String,
+    val worker: Class<out ListenableWorker>,
+    val newItemsIds: LongArray? = null,
+    val deletedItemsIds: LongArray? = null,
+    val lastCount: Int? = null,
+    )
 
 
 @Composable

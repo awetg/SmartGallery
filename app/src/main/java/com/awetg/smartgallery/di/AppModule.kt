@@ -5,10 +5,13 @@ import android.content.Context
 import androidx.room.Room
 import com.awetg.smartgallery.common.util.SharedPreferenceUtil
 import com.awetg.smartgallery.data.data.GalleryDatabase
+import com.awetg.smartgallery.data.repository.MediaClassificationRepositoryImpl
 import com.awetg.smartgallery.data.repository.MediaItemRepositoryImpl
+import com.awetg.smartgallery.domain.repository.MediaClassificationRepository
 import com.awetg.smartgallery.domain.repository.MediaItemRepository
 import com.awetg.smartgallery.domain.use_case.*
 import com.awetg.smartgallery.ui.screens.photosScreen.PhotosViewModel
+import com.awetg.smartgallery.ui.screens.searchScreen.SearchViewModel
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -22,7 +25,7 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun ProvideGalleryDatabase(application: Application): GalleryDatabase {
+    fun provideGalleryDatabase(application: Application): GalleryDatabase {
         return Room.databaseBuilder(
             application,
             GalleryDatabase::class.java,
@@ -32,8 +35,14 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun ProvideMediaItemRepository(db: GalleryDatabase): MediaItemRepository {
+    fun provideMediaItemRepository(db: GalleryDatabase): MediaItemRepository {
         return  MediaItemRepositoryImpl(db.mediaItemDao)
+    }
+
+    @Provides
+    @Singleton
+    fun provideMediaClassificationRepository(db: GalleryDatabase): MediaClassificationRepository {
+        return  MediaClassificationRepositoryImpl(db.mediaClassificationDao)
     }
 
     @Provides
@@ -49,8 +58,24 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideSearchUseCases(classificationRepository: MediaClassificationRepository, mediaRepository: MediaItemRepository): SearchUseCases {
+        return SearchUseCases(
+            getAllMediaClassification = GetAllMediaClassificationUseCase(classificationRepository),
+            addMediaClassifications = AddMediaClassificationUseCase(classificationRepository),
+            getMediaItemsByIds = GetMediaItemsByIdsUseCase(mediaRepository)
+        )
+    }
+
+    @Provides
+    @Singleton
     fun providePhotosViewModel(photosUseCases: PhotosUseCases, sharedPreferenceUtil: SharedPreferenceUtil): PhotosViewModel {
         return PhotosViewModel(photosUseCases, sharedPreferenceUtil)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSearchViewModel(searchUseCases: SearchUseCases, sharedPreferenceUtil: SharedPreferenceUtil): SearchViewModel {
+        return SearchViewModel(searchUseCases, sharedPreferenceUtil)
     }
 
     @Singleton

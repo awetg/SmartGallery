@@ -48,9 +48,7 @@ class PhotosViewModel @Inject constructor(private val photosUseCases: PhotosUseC
             try {
                 val mediaItemsFlow = photosUseCases.getMediaItemsByModifiedAt()
                 val mediaItems = mediaItemsFlow.first()
-//                    val mediaItems = mediaItemsFlow.flatMapConcat { it.asFlow() }.toList()
-                photosUiState.value =
-                    photosUiState.value.copy(mediaItems = mediaItems, isLoading = false)
+                photosUiState.value = photosUiState.value.copy(mediaItems = mediaItems, isLoading = false)
                 groupMediaItemByPath()
                 updateMLJobState()
                 groupMediaItemByClusterId()
@@ -131,21 +129,5 @@ class PhotosViewModel @Inject constructor(private val photosUseCases: PhotosUseC
     fun updateMLJobState() {
         val clusterJobComplete = sharedPreferenceUtil.prefs.getBoolean(SharedPreferenceUtil.CLUSTER_JOB_COMPLETE, false)
         mlJobState.value = mlJobState.value.copy(clusterJobComplete = clusterJobComplete)
-    }
-
-    fun addItems(mediaItems: ArrayList<MediaItem>) {
-        viewModelScope.launch(Dispatchers.IO) {
-            photosUseCases.addMediaItems(mediaItems).also { getMediaItemsByModifiedAt() }
-        }
-    }
-
-    fun deleteAllMediaItems() {
-        viewModelScope.launch(Dispatchers.IO) {
-            photosUseCases.deleteAllMediaItems()
-        }
-    }
-
-    private fun runFuncIfJobNotRunning(job: Job?, func: () -> Unit) {
-        if (job == null || !job?.isActive!!) func()
     }
 }

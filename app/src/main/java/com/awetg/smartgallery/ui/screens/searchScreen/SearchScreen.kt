@@ -1,5 +1,6 @@
 package com.awetg.smartgallery.ui.screens.searchScreen
 
+import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -27,6 +28,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
 import com.awetg.smartgallery.R
 import com.awetg.smartgallery.common.CLUSTER_GROUP
+import com.awetg.smartgallery.common.LOG_TAG
 import com.awetg.smartgallery.common.util.FileUtil
 import com.awetg.smartgallery.ui.screens.Screen
 import com.awetg.smartgallery.ui.screens.photosScreen.PhotosViewModel
@@ -37,10 +39,12 @@ import com.awetg.smartgallery.ui.theme.AppBarTextColor
 @Composable
 fun SearchScreen(
     onItemClickNavigation: (String) -> Unit,
-    viewModel: PhotosViewModel = hiltViewModel()
+    photosViewModel: PhotosViewModel = hiltViewModel(),
+    searchViewModel: SearchViewModel = hiltViewModel()
 ) {
-    val mlJobState = viewModel.mlJobState.value
-    val clusterUiState = viewModel.clusterUiState.value
+    val mlJobState = photosViewModel.mlJobState.value
+    val clusterUiState = photosViewModel.clusterUiState.value
+    val classificationUiState = searchViewModel.classificationUiState.value
 
     Column(
         modifier = Modifier
@@ -50,12 +54,10 @@ fun SearchScreen(
         LazyColumn {
             stickyHeader {  SearchBar{onItemClickNavigation(Screen.SearchResultScreen.route)} }
 
+            item {
+                SearchHeading(heading = "People")
+            }
             if (mlJobState.clusterJobComplete && clusterUiState.clusters.isNotEmpty()) {
-                item {
-                    Text(
-                        text = "People",
-                    )
-                }
                 //Horizontal Scroll view
                 item {
                     LazyRow {
@@ -89,64 +91,32 @@ fun SearchScreen(
                     }
                 }
             }
-
-
-            item {
-                Text(
-                    text = "Lists",
-                    color = Color.Black,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-
-            items(count = 10) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(100.dp)
-                        .padding(0.dp, 5.dp, 10.dp, 5.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Color.White),
-                    elevation = 5.dp
-                ) {
-                    Column(
-                        modifier = Modifier.padding(10.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                                contentDescription = "Profile Image",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .size(60.dp)
-                                    .clip(CircleShape)
-                            )
-
-                            Spacer(modifier = Modifier.padding(5.dp))
-
-                            Column {
-                                Text(
-                                    text = "Sample Test",
-                                    color = Color.Black,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-
-                                Spacer(modifier = Modifier.padding(2.dp))
-
-                                Text(
-                                    text = "Lorem Ipsum is simply dummy text of the printing and typesetting industry.",
-                                    color = Color.Gray,
-                                    fontSize = 12.sp
-                                )
-                            }
-                        }
-                    }
+            else {
+                Log.d(LOG_TAG, "size of cluster: ${clusterUiState.clusters.size}")
+                item {
+                    Text(
+                        text = "Face index is not complete.",
+                    )
                 }
             }
+
+            item { Spacer(modifier = Modifier.padding(16.dp)) }
+
+            item {
+                SearchHeading(heading = "Classification")
+            }
+            if (!classificationUiState.isLoading && classificationUiState.classifications.isNotEmpty()) {
+                items(classificationUiState.classifications.count()) { i ->
+                    Text(text = classificationUiState.classifications.elementAt(i).name)
+                }
+            } else {
+                item {
+                    Text(
+                        text = "Image classification is not complete.",
+                    )
+                }
+            }
+
         }
     }
 }
@@ -183,3 +153,64 @@ fun SearchBar(onClick: () -> Unit) {
         }
     }
 }
+
+@Composable
+fun SearchHeading(heading: String) {
+    Text(
+        text = heading,
+        color = Color.Black,
+        fontSize = 16.sp,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier.padding(0.dp, 8.dp)
+    )
+}
+
+
+
+//items(classificationUiState.classifications.count()) {
+//    Card(
+//        modifier = Modifier
+//            .fillMaxWidth()
+//            .height(100.dp)
+//            .padding(0.dp, 5.dp, 10.dp, 5.dp)
+//            .clip(RoundedCornerShape(10.dp))
+//            .background(Color.White),
+//        elevation = 5.dp
+//    ) {
+//        Column(
+//            modifier = Modifier.padding(10.dp)
+//        ) {
+//            Row(
+//                verticalAlignment = Alignment.CenterVertically
+//            ) {
+//                Image(
+//                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
+//                    contentDescription = "Profile Image",
+//                    contentScale = ContentScale.Crop,
+//                    modifier = Modifier
+//                        .size(60.dp)
+//                        .clip(CircleShape)
+//                )
+//
+//                Spacer(modifier = Modifier.padding(5.dp))
+//
+//                Column {
+//                    Text(
+//                        text = "Sample Test",
+//                        color = Color.Black,
+//                        fontSize = 16.sp,
+//                        fontWeight = FontWeight.Bold
+//                    )
+//
+//                    Spacer(modifier = Modifier.padding(2.dp))
+//
+//                    Text(
+//                        text = "Lorem Ipsum is simply dummy text of the printing and typesetting industry.",
+//                        color = Color.Gray,
+//                        fontSize = 12.sp
+//                    )
+//                }
+//            }
+//        }
+//    }
+//}

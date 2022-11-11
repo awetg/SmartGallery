@@ -9,12 +9,16 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -29,8 +33,6 @@ fun StringSearchScreen(
     onBackNavigationClick: () -> Unit,
     viewModel: SearchTextViewModel = hiltViewModel()
 ) {
-    Log.d(LOG_TAG, "SearchResultScreen draw")
-
     val searchTextState by viewModel.searchTextState
 
     val onSearchClick = { value:String ->
@@ -55,6 +57,7 @@ fun StringSearchScreen(
 
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun SearchInputBar(
     value: String,
@@ -63,24 +66,35 @@ fun SearchInputBar(
     onBackButtonClicked: () -> Unit
 ) {
 
+    val focusRequester = FocusRequester()
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    DisposableEffect(Unit) {
+        focusRequester.requestFocus()
+        onDispose { }
+    }
+
     Surface(
         modifier = Modifier
-            .fillMaxWidth()
-            .drawBehind {
-                val strokeWidth = 30 * density
+            .fillMaxWidth(),
+        color = AppBarColor
+    ) {
+        TextField(
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(focusRequester)
+                .onFocusChanged { if (it.isFocused) keyboardController?.show() }
+                .drawBehind {
+                val strokeWidth = 1 * density
                 val y = size.height - strokeWidth / 2
 
                 drawLine(
-                    Color.Red,
+                    Color.LightGray,
                     Offset(0f, y),
                     Offset(size.width, y),
                     strokeWidth
                 )
             },
-        color = AppBarColor
-    ) {
-        TextField(
-            modifier = Modifier.fillMaxWidth(),
             value = value,
             onValueChange = { onValueChanged(it) },
             placeholder = {
@@ -126,7 +140,7 @@ fun SearchInputBar(
             ),
             keyboardActions = KeyboardActions(
                 onSearch = { onSearchClicked(value) }
-            )
+            ),
         )
     }
 

@@ -19,14 +19,16 @@ const val MEDIA_SCAN_TYPE_RE_SYNC = "re_sync"
 const val MEDIA_SCAN_TYPE_UPDATE = "update"
 
 const val FACE_NET_ASSET_NAME = "facenet_128.tflite"
+const val PYTORCH_MOBILENET_V3_SMALL = "mobileNet_v3_small.pt"
+const val PYTORCH_YOLO5_MODEL = "yolov5s.torchscript.ptl"
 
 
-// face cluster worker input and output keys
-const val DATA_INPUT_KEY_FACE_CLUSTER_TYPE = "cluster_job_type"
+// job types for worker and input key
+const val DATA_INPUT_KEY_JOB_TYPE = "job_type"
 
-const val FACE_CLUSTER_JOB_ALL = "cluster_all_media"
-const val FACE_CLUSTER_JOB_UPDATE = "update_cluster"
-const val FACE_CLUSTER_JOB_PARTIAL = "cluster_chunks"
+const val JOB_TYPE_ALL = "job_type_all"
+const val JOB_TYPE_UPDATE = "job_type_update"
+const val JOB_TYPE_PARTIAL = "job_type_partial"
 
 const val LOG_TAG = "smartGallery"
 
@@ -37,3 +39,4 @@ const val CLUSTER_DIR = "cluster"
 // media group types
 const val ALBUM_GROUP = "albums"
 const val CLUSTER_GROUP = "clusters"
+const val STRING_SEARCH_GROUP = "string"
