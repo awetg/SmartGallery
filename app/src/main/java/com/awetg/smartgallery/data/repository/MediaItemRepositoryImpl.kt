@@ -38,10 +38,6 @@ class MediaItemRepositoryImpl(private val dao: MediaItemDao): MediaItemRepositor
         return dao.deleteAll()
     }
 
-    override fun updateClusterByIds(clusterId: Int, ids: List<Long>) {
-        dao.updateClusterByIds(clusterId, ids)
-    }
-
     override fun getMediaItemsByIds(ids: List<Long>): Flow<List<MediaItem>> {
         return dao.getMediaItemsByIds(ids)
     }

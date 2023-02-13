@@ -183,7 +183,7 @@ class MainActivity : ComponentActivity() {
         }
         if (workInfo.state.isFinished) {
             Log.d(LOG_TAG, "Media scan finished")
-            photosViewModel.reloadMediaItems()
+            photosViewModel.getMediaItemsByModifiedAt()
         }
     }
 
@@ -206,6 +206,21 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val faceClusterObserver = { workInfo: WorkInfo, _: JobData ->
+        when (workInfo.state) {
+            WorkInfo.State.SUCCEEDED -> {
+                Log.d(LOG_TAG, "Face cluster succeeded")
+                sharedPreferenceUtil.saveBoolean(SharedPreferenceUtil.CLUSTER_JOB_COMPLETE, true)
+                searchViewModel.updateClassificationState()
+            }
+            WorkInfo.State.FAILED -> Log.d(LOG_TAG, "Face cluster failed")
+            WorkInfo.State.CANCELLED -> Log.d(LOG_TAG, "Face cluster cancelled")
+            else ->
+                Log.d(LOG_TAG, "Running face cluster")
+        }
+        if (workInfo.state.isFinished) { Log.d(LOG_TAG, "Face cluster finished") }
+    }
+
     private val classifierObserver = { workInfo: WorkInfo, jobData: JobData ->
         when (workInfo.state) {
             WorkInfo.State.SUCCEEDED -> {
@@ -223,21 +238,6 @@ class MainActivity : ComponentActivity() {
         if (workInfo.state.isFinished) {
             Log.d(LOG_TAG, "Media classification finished")
         }
-    }
-
-    private val faceClusterObserver = { workInfo: WorkInfo, _: JobData ->
-        when (workInfo.state) {
-            WorkInfo.State.SUCCEEDED -> {
-                Log.d(LOG_TAG, "Face cluster succeeded")
-                sharedPreferenceUtil.saveBoolean(SharedPreferenceUtil.CLUSTER_JOB_COMPLETE, true)
-                photosViewModel.updateMLJobState()
-            }
-            WorkInfo.State.FAILED -> Log.d(LOG_TAG, "Face cluster failed")
-            WorkInfo.State.CANCELLED -> Log.d(LOG_TAG, "Face cluster cancelled")
-            else ->
-                Log.d(LOG_TAG, "Running face cluster")
-        }
-        if (workInfo.state.isFinished) { Log.d(LOG_TAG, "Face cluster finished") }
     }
 
 

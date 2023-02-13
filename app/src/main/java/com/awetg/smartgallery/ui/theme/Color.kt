@@ -20,3 +20,5 @@ var AppBarTextColor = Color.DarkGray
 
 var SearchBarColor = Gray200
 
+val textButtonColor = Color(0xFF3672B3)
+

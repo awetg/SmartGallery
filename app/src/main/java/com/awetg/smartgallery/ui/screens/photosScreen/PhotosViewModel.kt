@@ -19,7 +19,7 @@ import java.io.IOException
 import javax.inject.Inject
 
 @HiltViewModel
-class PhotosViewModel @Inject constructor(private val photosUseCases: PhotosUseCases, private val sharedPreferenceUtil: SharedPreferenceUtil) :
+class PhotosViewModel @Inject constructor(private val photosUseCases: PhotosUseCases) :
     ViewModel() {
 
     var photosUiState = mutableStateOf(PhotosUiState())
@@ -28,106 +28,25 @@ class PhotosViewModel @Inject constructor(private val photosUseCases: PhotosUseC
     var albumUiState = mutableStateOf(AlbumUiState())
         private set
 
-    var clusterUiState = mutableStateOf(ClusterUiState())
-        private set
-
-    var mlJobState = mutableStateOf(MLJobState())
-        private set
-
     private var getMediaItemsJob: Job? = null
-    private var getMediaAlbumsJob: Job? = null
-    private var getMediaClusterJob: Job? = null
 
     init {
         getMediaItemsByModifiedAt()
     }
 
-    private fun getMediaItemsByModifiedAt() {
+    fun getMediaItemsByModifiedAt() {
         getMediaItemsJob?.cancel()
         getMediaItemsJob = viewModelScope.launch {
             try {
                 val mediaItemsFlow = photosUseCases.getMediaItemsByModifiedAt()
                 val mediaItems = mediaItemsFlow.first()
                 photosUiState.value = photosUiState.value.copy(mediaItems = mediaItems, isLoading = false)
-                groupMediaItemByPath()
-                updateMLJobState()
-                groupMediaItemByClusterId()
+                val albums = mediaItems.groupBy { it.parentPath }.values.toList()
+                albumUiState.value = albumUiState.value.copy(isLoading = false, albums = albums)
             } catch (ioe: IOException) {
                 Log.e(LOG_TAG, "get media items exception: $ioe")
             }
         }
     }
 
-    private fun groupMediaItemByPath() {
-        getMediaAlbumsJob?.cancel()
-        getMediaAlbumsJob = viewModelScope.launch {
-            try {
-                val albums =
-                    photosUiState.value.mediaItems.groupBy { it.parentPath }.values.toList()
-                albumUiState.value = albumUiState.value.copy(isLoading = false, albums = albums)
-            } catch (e: Exception) {
-                Log.e(LOG_TAG, "group media items by parent path exception: $e")
-            }
-        }
-    }
-
-    fun reloadMediaItems() {
-        getMediaItemsByModifiedAt()
-    }
-
-    fun getNextMediaItemUri(mediaIndex: Int, groupIndex: Int, groupType: String): MediaItem? {
-        if (photosUiState.value.mediaItems.isEmpty()) return null
-        return when(groupType) {
-            ALBUM_GROUP -> {
-                return when {
-                    groupIndex < 0 -> photosUiState.value.mediaItems.elementAt(mediaIndex)
-                    groupIndex >= 0 -> albumUiState.value.albums.elementAt(groupIndex).elementAt(mediaIndex)
-                    else -> null
-                }
-            }
-            CLUSTER_GROUP -> {
-                return if (groupIndex >= 0) clusterUiState.value.clusters.elementAt(groupIndex).elementAt(mediaIndex) else null
-            }
-            else -> null
-        }
-    }
-
-    fun getMediaCount(groupIndex: Int, groupType: String): Int {
-        if (photosUiState.value.mediaItems.isEmpty()) return 0
-        return when(groupType) {
-            ALBUM_GROUP -> {
-                return when {
-                    groupIndex < 0 -> photosUiState.value.mediaItems.count()
-                    groupIndex >= 0 -> albumUiState.value.albums.elementAt(groupIndex).count()
-                    else -> 0
-                }
-            }
-            CLUSTER_GROUP -> {
-                return if (groupIndex >= 0) clusterUiState.value.clusters.elementAt(groupIndex).count() else 0
-            }
-            else -> 0
-        }
-    }
-
-    private fun groupMediaItemByClusterId() {
-        if (mlJobState.value.clusterJobComplete) {
-            getMediaClusterJob?.cancel()
-            getMediaClusterJob = viewModelScope.launch {
-                try {
-                    val clusters =
-                        photosUiState.value.mediaItems.filter { it.clusterId > -1 }.groupBy { it.clusterId }.values.toList()
-                    clusterUiState.value = clusterUiState.value.copy(isLoading = false, clusters = clusters)
-                } catch (e: Exception) {
-                    Log.e(LOG_TAG, "group media items by clusterId exception: $e")
-                }
-            }
-        } else {
-            Log.d(LOG_TAG, "cluster job not complete")
-        }
-    }
-
-    fun updateMLJobState() {
-        val clusterJobComplete = sharedPreferenceUtil.prefs.getBoolean(SharedPreferenceUtil.CLUSTER_JOB_COMPLETE, false)
-        mlJobState.value = mlJobState.value.copy(clusterJobComplete = clusterJobComplete)
-    }
 }

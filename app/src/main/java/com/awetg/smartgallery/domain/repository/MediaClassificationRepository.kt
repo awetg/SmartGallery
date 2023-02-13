@@ -6,4 +6,5 @@ import kotlinx.coroutines.flow.Flow
 interface MediaClassificationRepository {
     fun getAllMediaClassification(): Flow<List<MediaClassification>>
     fun insertAll(mediaClassifications: List<MediaClassification>)
+    fun getAllMediaClassificationById(id: Long): Flow<MediaClassification>
 }

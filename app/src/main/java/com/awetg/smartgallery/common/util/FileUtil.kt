@@ -78,7 +78,7 @@ object FileUtil {
         }
     }
 
-    fun getClusterPhoto(context: Context, clusterId: Int): File? {
+    fun getClusterPhoto(context: Context, clusterId: String): File? {
         return try {
             val file = File(context.getExternalFilesDir(null), "$CLUSTER_DIR/$clusterId.png")
             if (file.exists()) file else null

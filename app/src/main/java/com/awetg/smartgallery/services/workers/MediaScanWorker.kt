@@ -183,8 +183,7 @@ class MediaScanWorker @AssistedInject constructor(
                     type = MediaItem.MEDIA_TYPE_IMAGE,
                     uri = contentUri,
                     height = height,
-                    width = width,
-                    clusterId = -1
+                    width = width
                 )
                 mediaItems.add(mediaItem)
             }

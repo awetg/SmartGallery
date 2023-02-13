@@ -70,7 +70,9 @@ class YoloObjectDetectionWorker@AssistedInject constructor(
                 e.printStackTrace()
             }
         }
-        val mediaClassifications = mediaClassificationMap.map { (className, ids) -> MediaClassification(id = null, name = className, mediaItemIds = ids) }
+        val mediaClassifications = mediaClassificationMap.map { (className, ids) ->
+            MediaClassification(id = null, name = className, mediaItemIds = ids, type = MediaClassification.CLASSIFICATION_TYPE_OBJECT_DETECTION)
+        }
         galleryDatabase.mediaClassificationDao.insertAll(mediaClassifications = mediaClassifications)
         return true
     }

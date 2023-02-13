@@ -14,4 +14,7 @@ interface MediaClassificationDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertAll(mediaClassifications: List<MediaClassification>)
+
+    @Query("SELECT * FROM classification where id = :id")
+    fun getAllMediaClassificationById(id: Long): Flow<MediaClassification>
 }

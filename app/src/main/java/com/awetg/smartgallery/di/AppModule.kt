@@ -10,6 +10,7 @@ import com.awetg.smartgallery.data.repository.MediaItemRepositoryImpl
 import com.awetg.smartgallery.domain.repository.MediaClassificationRepository
 import com.awetg.smartgallery.domain.repository.MediaItemRepository
 import com.awetg.smartgallery.domain.use_case.*
+import com.awetg.smartgallery.ui.screens.groupedPhotosScreen.GroupedMediaViewModel
 import com.awetg.smartgallery.ui.screens.photosScreen.PhotosViewModel
 import com.awetg.smartgallery.ui.screens.searchScreen.SearchViewModel
 import dagger.Module
@@ -52,7 +53,8 @@ object AppModule {
             getMediaItems = GetMediaItemsUseCase(repository),
             getMediaItemsByModifiedAt = GetMediaItemsByModifiedAtUseCase(repository),
             addMediaItems = AddMediaItemsUseCase(repository),
-            deleteAllMediaItems = DeleteAllMediaItemsUseCase(repository)
+            deleteAllMediaItems = DeleteAllMediaItemsUseCase(repository
+            )
         )
     }
 
@@ -62,20 +64,28 @@ object AppModule {
         return SearchUseCases(
             getAllMediaClassification = GetAllMediaClassificationUseCase(classificationRepository),
             addMediaClassifications = AddMediaClassificationUseCase(classificationRepository),
-            getMediaItemsByIds = GetMediaItemsByIdsUseCase(mediaRepository)
+            getMediaItemsByIds = GetMediaItemsByIdsUseCase(mediaRepository),
+            getAllMediaClassificationByIdUseCase = GetAllMediaClassificationByIdUseCase(classificationRepository
+            )
         )
     }
 
     @Provides
     @Singleton
-    fun providePhotosViewModel(photosUseCases: PhotosUseCases, sharedPreferenceUtil: SharedPreferenceUtil): PhotosViewModel {
-        return PhotosViewModel(photosUseCases, sharedPreferenceUtil)
+    fun providePhotosViewModel(photosUseCases: PhotosUseCases): PhotosViewModel {
+        return PhotosViewModel(photosUseCases)
     }
 
     @Provides
     @Singleton
-    fun provideSearchViewModel(searchUseCases: SearchUseCases, sharedPreferenceUtil: SharedPreferenceUtil): SearchViewModel {
-        return SearchViewModel(searchUseCases, sharedPreferenceUtil)
+    fun provideSearchViewModel(searchUseCases: SearchUseCases): SearchViewModel {
+        return SearchViewModel(searchUseCases)
+    }
+
+    @Provides
+    @Singleton
+    fun provideGroupedMediaViewModel(searchUseCases: SearchUseCases): GroupedMediaViewModel {
+        return GroupedMediaViewModel(searchUseCases)
     }
 
     @Singleton

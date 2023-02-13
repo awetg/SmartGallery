@@ -19,7 +19,6 @@ data class MediaItem(
     @ColumnInfo(name = "uri") var uri: Uri,
     @ColumnInfo(name = "height") var height: Int,
     @ColumnInfo(name = "width") var width: Int,
-    @ColumnInfo(name = "cluster") var clusterId: Int,
 ) {
     companion object {
         // media constants

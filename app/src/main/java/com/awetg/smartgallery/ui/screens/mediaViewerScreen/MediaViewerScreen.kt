@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
 import com.awetg.smartgallery.data.entities.MediaItem
+import com.awetg.smartgallery.ui.screens.groupedPhotosScreen.GroupedMediaViewModel
 import com.awetg.smartgallery.ui.screens.photosScreen.PhotosViewModel
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
@@ -26,12 +27,12 @@ import com.mxalbert.zoomable.rememberZoomableState
 @Composable
 fun MediaViewerScreen(
     onBackNavigationClick: () -> Unit,
-    viewerArgument: ViewerArgument,
-    viewModel: PhotosViewModel = hiltViewModel()
+    mediaIndex: Int,
+    viewModel: GroupedMediaViewModel = hiltViewModel()
 ) {
     val showBars = rememberSaveable { (mutableStateOf(true)) }
-    val pagerState = rememberPagerState(viewerArgument.mediaIndex)
-    val imageCount = viewModel.getMediaCount(viewerArgument.groupIndex, viewerArgument.groupType)
+    val pagerState = rememberPagerState(mediaIndex)
+    val state = viewModel.groupedMediaUiState.value
 
     Scaffold(
         backgroundColor = Color.Black,
@@ -43,13 +44,13 @@ fun MediaViewerScreen(
         },
         bottomBar = { if (showBars.value) ViewerBottomBar() },
         content = {
-            HorizontalPager(count = imageCount, state = pagerState) { page ->
-                val mediaItem = viewModel.getNextMediaItemUri(page, viewerArgument.groupIndex, viewerArgument. groupType)
+            HorizontalPager(count = state.mediaItems.count(), state = pagerState) { page ->
+                val mediaItem = state.mediaItems.elementAt(page)
                 val state = rememberZoomableState(
                     minScale = 1f,
                     maxScale = 8f
                 )
-                mediaItem?.let {
+                mediaItem.let {
                     Zoomable(
                         modifier = Modifier.fillMaxSize(),
                         state = state,

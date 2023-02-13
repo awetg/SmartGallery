@@ -1,14 +1,11 @@
 package com.awetg.smartgallery.ui.screens.searchScreen
 
 import android.util.Log
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -20,31 +17,30 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
-import com.awetg.smartgallery.R
 import com.awetg.smartgallery.common.CLUSTER_GROUP
 import com.awetg.smartgallery.common.LOG_TAG
+import com.awetg.smartgallery.common.OBJECT_DETECTION_GROUP
 import com.awetg.smartgallery.common.util.FileUtil
 import com.awetg.smartgallery.ui.screens.Screen
 import com.awetg.smartgallery.ui.screens.photosScreen.PhotosViewModel
 import com.awetg.smartgallery.ui.theme.SearchBarColor
 import com.awetg.smartgallery.ui.theme.AppBarTextColor
+import com.awetg.smartgallery.ui.theme.textButtonColor
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SearchScreen(
     onItemClickNavigation: (String) -> Unit,
-    photosViewModel: PhotosViewModel = hiltViewModel(),
     searchViewModel: SearchViewModel = hiltViewModel()
 ) {
-    val mlJobState = photosViewModel.mlJobState.value
-    val clusterUiState = photosViewModel.clusterUiState.value
-    val classificationUiState = searchViewModel.classificationUiState.value
+    val clusterUiState = searchViewModel.clusterUiState.value
+    val objectDetectionUiState = searchViewModel.objectDetectionUiState.value
 
     Column(
         modifier = Modifier
@@ -57,12 +53,13 @@ fun SearchScreen(
             item {
                 SearchHeading(heading = "People")
             }
-            if (mlJobState.clusterJobComplete && clusterUiState.clusters.isNotEmpty()) {
+            if (!clusterUiState.isLoading && clusterUiState.classifications.isNotEmpty()) {
                 //Horizontal Scroll view
                 item {
                     LazyRow {
-                        items(clusterUiState.clusters.count()) { i ->
-                            val file = FileUtil.getClusterPhoto(LocalContext.current, clusterUiState.clusters.elementAt(i).first().clusterId)
+                        items(clusterUiState.classifications.count()) { i ->
+                            val file = FileUtil.getClusterPhoto(LocalContext.current, clusterUiState.classifications.elementAt(i).name)
+                            val groupId = clusterUiState.classifications.elementAt(i).id
                             if (file != null) {
                                 Card(
                                     modifier = Modifier
@@ -72,7 +69,7 @@ fun SearchScreen(
                                         .clip(RoundedCornerShape(50))
                                         .clickable {
                                             onItemClickNavigation(
-                                                Screen.GroupedPhotosScreen.route + "?groupIndex=${i}&groupType=${CLUSTER_GROUP}"
+                                                Screen.GroupedPhotosScreen.route + "?groupType=${CLUSTER_GROUP}&groupId=${groupId}"
                                             )
                                         },
                                     elevation = 5.dp
@@ -92,7 +89,6 @@ fun SearchScreen(
                 }
             }
             else {
-                Log.d(LOG_TAG, "size of cluster: ${clusterUiState.clusters.size}")
                 item {
                     Text(
                         text = "Face index is not complete.",
@@ -103,11 +99,33 @@ fun SearchScreen(
             item { Spacer(modifier = Modifier.padding(16.dp)) }
 
             item {
-                SearchHeading(heading = "Classification")
+                SearchHeading(heading = "Filters")
             }
-            if (!classificationUiState.isLoading && classificationUiState.classifications.isNotEmpty()) {
-                items(classificationUiState.classifications.count()) { i ->
-                    Text(text = classificationUiState.classifications.elementAt(i).name)
+            if (!objectDetectionUiState.isLoading && objectDetectionUiState.classifications.isNotEmpty()) {
+                item {
+                    LazyRow {
+                        items(objectDetectionUiState.classifications.count()) { i ->
+                            val groupId = objectDetectionUiState.classifications.elementAt(i).id
+                            val name = objectDetectionUiState.classifications.elementAt(i).name
+                            OutlinedButton(
+                                modifier = Modifier
+                                    .padding(4.dp, 8.dp),
+                                shape = RoundedCornerShape(20),
+                                border = BorderStroke(1.dp, Color.Gray),
+                                onClick = {
+                                    onItemClickNavigation(
+                                        Screen.GroupedPhotosScreen.route + "?groupType=${OBJECT_DETECTION_GROUP}&groupId=${groupId}"
+                                    )
+                                }
+                            ) {
+                                Text(
+                                    text = name,
+                                    color = AppBarTextColor
+                                )
+                            }
+                        }
+
+                    }
                 }
             } else {
                 item {
@@ -156,13 +174,26 @@ fun SearchBar(onClick: () -> Unit) {
 
 @Composable
 fun SearchHeading(heading: String) {
-    Text(
-        text = heading,
-        color = Color.Black,
-        fontSize = 16.sp,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.padding(0.dp, 8.dp)
-    )
+    Row(
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = heading,
+            color = Color.Black,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(0.dp, 8.dp)
+        )
+        TextButton(onClick = { /*TODO*/ }) {
+            Text(
+                text = "View all",
+                color = textButtonColor,
+                fontSize = 14.sp,
+            )
+        }
+    }
 }
 
 

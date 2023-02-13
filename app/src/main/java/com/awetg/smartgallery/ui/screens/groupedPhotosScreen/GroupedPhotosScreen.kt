@@ -1,5 +1,6 @@
 package com.awetg.smartgallery.ui.screens.groupedPhotosScreen
 
+import android.util.Log
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.Scaffold
@@ -7,27 +8,36 @@ import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.awetg.smartgallery.common.ALBUM_GROUP
-import com.awetg.smartgallery.common.CLUSTER_DIR
-import com.awetg.smartgallery.common.CLUSTER_GROUP
+import com.awetg.smartgallery.common.*
 import com.awetg.smartgallery.ui.components.ThumbnailGridViewer
 import com.awetg.smartgallery.ui.screens.photosScreen.PhotosViewModel
+import com.awetg.smartgallery.ui.screens.searchScreen.SearchViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun GroupedPhotosScreen(
-    groupIndex: Int,
+    groupId: Long,
     groupType: String,
     onBackNavigationClick: () -> Unit,
     onImageClickNavigation: (String) -> Unit,
-    viewModel: PhotosViewModel = hiltViewModel()
+    photosViewModel: PhotosViewModel = hiltViewModel(),
+    groupViewModel: GroupedMediaViewModel = hiltViewModel()
 ) {
-    val state = when(groupType) {
-        ALBUM_GROUP -> viewModel.albumUiState.value.albums
-        CLUSTER_GROUP -> viewModel.clusterUiState.value.clusters
-        else -> emptyList()
+
+    val coroutineScope = rememberCoroutineScope()
+    LaunchedEffect(key1 = groupId, key2 = groupType) {
+        when(groupType) {
+            ALL_GROUP -> groupViewModel.setGroupedMedia(photosViewModel.photosUiState.value.mediaItems)
+            ALBUM_GROUP -> groupViewModel.setGroupedMedia(photosViewModel.albumUiState.value.albums.elementAt(groupId.toInt()))
+            CLUSTER_GROUP, OBJECT_DETECTION_GROUP -> coroutineScope.launch {groupViewModel.setGroupedMediaFromClassification(groupId) }
+        }
     }
-    state.elementAt(groupIndex).let { mediaItems ->
+
+    val state = groupViewModel.groupedMediaUiState.value
+    if (state.mediaItems.isNotEmpty()) {
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -43,7 +53,7 @@ fun GroupedPhotosScreen(
                 )
             },
             content = {
-                ThumbnailGridViewer(mediaItems, onImageClickNavigation, groupIndex, groupType)
+                ThumbnailGridViewer(state.mediaItems, onImageClickNavigation)
             }
         )
     }

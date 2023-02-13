@@ -37,6 +37,8 @@ const val FACES_DIR = "faces"
 const val CLUSTER_DIR = "cluster"
 
 // media group types
+const val ALL_GROUP = "all"
 const val ALBUM_GROUP = "albums"
 const val CLUSTER_GROUP = "clusters"
+const val OBJECT_DETECTION_GROUP = "object"
 const val STRING_SEARCH_GROUP = "string"

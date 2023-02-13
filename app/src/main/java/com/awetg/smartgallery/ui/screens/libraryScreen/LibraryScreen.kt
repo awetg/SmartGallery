@@ -22,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
+import com.awetg.smartgallery.common.ALBUM_GROUP
+import com.awetg.smartgallery.common.CLUSTER_GROUP
 import com.awetg.smartgallery.data.entities.MediaItem
 import com.awetg.smartgallery.ui.screens.Screen
 import com.awetg.smartgallery.ui.screens.photosScreen.PhotosViewModel
@@ -60,7 +62,7 @@ fun LibraryScreen(
             items(state.albums.count()) { i ->
                 AlbumThumbnailBox(state.albums.elementAt(i).first()) {
                     onImageClickNavigation(
-                        Screen.GroupedPhotosScreen.route + "?groupIndex=${i}"
+                        Screen.GroupedPhotosScreen.route + "?groupType=${ALBUM_GROUP}&groupId=${i}"
                     )
                 }
             }

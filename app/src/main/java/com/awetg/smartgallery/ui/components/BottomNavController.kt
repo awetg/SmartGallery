@@ -64,29 +64,29 @@ fun BottomNavController() {
         }
 
         composable(
-            Screen.GroupedPhotosScreen.route + "?groupIndex={groupIndex}&groupType={groupType}",
+            Screen.GroupedPhotosScreen.route + "?groupType={groupType}&groupId={groupId}",
             listOf(
-                navArgument(
-                    name = "groupIndex"
-                ) {
-                    type = NavType.IntType
-                    defaultValue = -1
-                },
                 navArgument(
                     name = "groupType"
                 ) {
                     type = NavType.StringType
-                    defaultValue = ALBUM_GROUP
+                    defaultValue = ""
+                },
+                navArgument(
+                    name = "groupId"
+                ) {
+                    type = NavType.LongType
+                    defaultValue = -1
                 },
             )
         ) {
-            val groupIndex = it.arguments?.getInt("groupIndex") ?: -1
-            val groupType = it.arguments?.getString("groupType") ?: ALBUM_GROUP
-            GroupedPhotosScreen(groupIndex, groupType, onBackNavigationClick, onItemClickNavigation)
+            val groupId = it.arguments?.getLong("groupId") ?: -1
+            val groupType = it.arguments?.getString("groupType") ?: ""
+            GroupedPhotosScreen(groupId, groupType, onBackNavigationClick, onItemClickNavigation)
         }
 
         composable(
-            Screen.MediaViewerScreen.route + "?mediaIndex={mediaIndex}&groupIndex={groupIndex}&groupType={groupType}",
+            Screen.MediaViewerScreen.route + "?mediaIndex={mediaIndex}",
             listOf(
                 navArgument(
                     name = "mediaIndex"
@@ -94,25 +94,10 @@ fun BottomNavController() {
                     type = NavType.IntType
                     defaultValue = -1
                 },
-                navArgument(
-                    name = "groupIndex"
-                ) {
-                    type = NavType.IntType
-                    defaultValue = -1
-                },
-                navArgument(
-                    name = "groupType"
-                ) {
-                    type = NavType.StringType
-                    defaultValue = ALBUM_GROUP
-                },
             )
         ) {
             val mediaIndex = it.arguments?.getInt("mediaIndex") ?: -1
-            val groupIndex = it.arguments?.getInt("groupIndex") ?: -1
-            val groupType = it.arguments?.getString("groupType") ?: ALBUM_GROUP
-            val viewerArgument = ViewerArgument(mediaIndex, groupIndex, groupType)
-            MediaViewerScreen(onBackNavigationClick, viewerArgument)
+            MediaViewerScreen(onBackNavigationClick, mediaIndex)
         }
 
         composable(Screen.SearchResultScreen.route) {

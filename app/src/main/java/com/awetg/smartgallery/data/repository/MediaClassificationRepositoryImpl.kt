@@ -13,4 +13,8 @@ class MediaClassificationRepositoryImpl(private val dao: MediaClassificationDao)
     override fun insertAll(mediaClassifications: List<MediaClassification>) {
         dao.insertAll(mediaClassifications)
     }
+
+    override fun getAllMediaClassificationById(id: Long): Flow<MediaClassification> {
+        return dao.getAllMediaClassificationById(id)
+    }
 }

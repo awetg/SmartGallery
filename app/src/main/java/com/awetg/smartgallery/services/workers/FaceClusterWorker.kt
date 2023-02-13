@@ -6,6 +6,7 @@ import androidx.work.WorkerParameters
 import com.awetg.smartgallery.common.*
 import com.awetg.smartgallery.common.util.FileUtil
 import com.awetg.smartgallery.data.data.GalleryDatabase
+import com.awetg.smartgallery.data.entities.MediaClassification
 import com.awetg.smartgallery.services.mlmodels.ChineseWhispersClustering
 import com.awetg.smartgallery.services.mlmodels.TensorFlowFaceNetModel
 import com.awetg.smartgallery.services.mlmodels.MLKitFaceDetector
@@ -77,6 +78,7 @@ class FaceClusterWorker @AssistedInject constructor(
     }
 
     private suspend fun clusterFaceForAllMedia(): Boolean {
+        // if external storage is non writeable (full or permission) return
         if (!FileUtil.isExternalStorageWritable()) return false
 
         FileUtil.createDirInExternalStorageCache(applicationContext, FACES_DIR)
@@ -94,7 +96,7 @@ class FaceClusterWorker @AssistedInject constructor(
                     results.result.forEachIndexed { i, face ->
                         val faceBitmap = faceDetector.getCroppedFace(mediaItemBitmap, face)
                         if (faceBitmap != null) {
-                            val mapKey = "${mediaItem.mediaStoreId}_$i"
+                            val mapKey = "${mediaItem.id}_$i"
                             encodingHashMap[mapKey] = tensorFlowFaceNetModel.getEmbedding(faceBitmap)
                             val alignmentValue = face.headEulerAngleY.absoluteValue + face.headEulerAngleX.absoluteValue + face.headEulerAngleZ.absoluteValue
                             faceAlignmentMap[mapKey] = alignmentValue
@@ -114,8 +116,10 @@ class FaceClusterWorker @AssistedInject constructor(
         if (encodingHashMap.isNotEmpty()) {
             val cw = ChineseWhispersClustering(encodingHashMap, 128)
             val clusterMap = cw.cluster()
+            val mediaClassificationMap = HashMap<String, List<Long>>()
             clusterMap.forEach { (clusterId, files) ->
                 val mostAlignedFace = faceAlignmentMap.asSequence().filter { files.contains(it.key) }.minByOrNull { it.value }
+                val al = files.mapNotNull { faceAlignmentMap[it] }.minOrNull()
                 if (mostAlignedFace != null) {
                     val srcFile = File(applicationContext.externalCacheDir, "$FACES_DIR/${mostAlignedFace.key}.png")
                     val destFile = File(applicationContext.getExternalFilesDir(null), "$CLUSTER_DIR/${clusterId}.png")
@@ -126,13 +130,19 @@ class FaceClusterWorker @AssistedInject constructor(
                         Log.d(LOG_TAG, "Unable to copy image to cluster folder!")
                     }
                     try {
-                        val mediaStoreIds = files.map { it.split("_")[0].toLong() }
-                        galleryDatabase.mediaItemDao.updateClusterByIds(clusterId, mediaStoreIds)
+                        val mediaIds = files.map { it.split("_")[0].toLong() }
+                        mediaClassificationMap[clusterId.toString()] = mediaIds
                     } catch (e: NumberFormatException) {
                         e.printStackTrace()
                         Log.d(LOG_TAG, "error parsing medias store ids from string to long")
                     }
                 }
+            }
+            if (mediaClassificationMap.isNotEmpty()) {
+                val mediaClassifications = mediaClassificationMap.map { (className, ids) ->
+                    MediaClassification(id = null, name = className, mediaItemIds = ids, type = MediaClassification.CLASSIFICATION_TYPE_CLUSTER)
+                }
+                galleryDatabase.mediaClassificationDao.insertAll(mediaClassifications = mediaClassifications)
             }
         }
         return true

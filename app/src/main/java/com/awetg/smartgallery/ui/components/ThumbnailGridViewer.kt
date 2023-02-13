@@ -19,7 +19,7 @@ import com.awetg.smartgallery.ui.screens.Screen
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ThumbnailGridViewer(mediaItems:  List<MediaItem>, onImageClickNavigation: (String) -> Unit, groupIndex: Int, groupType: String = ALBUM_GROUP) {
+fun ThumbnailGridViewer(mediaItems:  List<MediaItem>, onImageClickNavigation: (String) -> Unit) {
     Column(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -33,7 +33,7 @@ fun ThumbnailGridViewer(mediaItems:  List<MediaItem>, onImageClickNavigation: (S
             items(mediaItems.count()) { i ->
                 ThumbnailBox(mediaItems.elementAt(i)) {
                         onImageClickNavigation(
-                            Screen.MediaViewerScreen.route + "?mediaIndex=${i}&groupIndex=${groupIndex}&groupType=${groupType}"
+                            Screen.MediaViewerScreen.route + "?mediaIndex=${i}"
                         )
                 }
             }

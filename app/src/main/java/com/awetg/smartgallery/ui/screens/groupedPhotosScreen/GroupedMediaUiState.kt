@@ -1,9 +1,9 @@
-package com.awetg.smartgallery.ui.screens.searchScreen
+package com.awetg.smartgallery.ui.screens.groupedPhotosScreen
 
 import com.awetg.smartgallery.data.entities.MediaClassification
 import com.awetg.smartgallery.data.entities.MediaItem
 
-data class ClusterUiState(
+data class GroupedMediaUiState(
     val isLoading: Boolean = false,
-    val classifications: List<MediaClassification> = emptyList(),
+    val mediaItems: List<MediaItem> = emptyList(),
 )
