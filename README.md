@@ -18,9 +18,13 @@ git clone git@github.com:awetg/SmartGallery.git
 ```
 Build it using Android Studio
 
-## Screenshots and videos
+## Screenshots
 
+### videos
 https://user-images.githubusercontent.com/32410448/235491979-2bef86d3-f1c0-44cb-b02d-3bed146646ca.mp4
+
+
+### photos
 
 <img width="250" src="![Screenshot_20230501_185315_Smart Gallery](https://user-images.githubusercontent.com/32410448/235490581-6a93b72b-cdc9-415d-93eb-3fc333ffcf84.jpg)">&nbsp;
 <img width="250" src="![Screenshot_20230424_204153_Smart Gallery](https://user-images.githubusercontent.com/32410448/235490643-fe67a727-f393-4a32-b3a7-7318971e20f9.jpg)">&nbsp;
