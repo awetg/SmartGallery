@@ -181,7 +181,7 @@ fun SearchHeading(heading: String) {
     ) {
         Text(
             text = heading,
-            color = Color.Black,
+//            color = Color.Black,
             fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(0.dp, 8.dp)

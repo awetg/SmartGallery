@@ -50,9 +50,10 @@ class YoloObjectDetectionWorker@AssistedInject constructor(
     }
 
     private suspend fun detectObjectForAllMedias():Boolean {
-        val mediaItems = galleryDatabase.mediaItemDao.getMediaItemsByModifiedAt().first()
+        // using test dataset for demo
+        val mediaItems = galleryDatabase.mediaItemDao.getMediaItemsByPath("yolo_dataset/").first()
         val mediaClassificationMap = HashMap<String, MutableList<Long>>()
-        mediaItems.take(100).forEach{ mediaItem ->
+        mediaItems.forEach{ mediaItem ->
             try {
                 val mediaItemBitmap = this.getMediaItemThumbnail(mediaItem, Size(640, 640))
                 val classNames = pytorchYolo5Model.detectObjects(mediaItemBitmap)

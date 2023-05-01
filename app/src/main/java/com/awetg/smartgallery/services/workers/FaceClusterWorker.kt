@@ -84,9 +84,10 @@ class FaceClusterWorker @AssistedInject constructor(
         FileUtil.createDirInExternalStorageCache(applicationContext, FACES_DIR)
         FileUtil.createDirInExternalStorage(applicationContext, CLUSTER_DIR)
 
-        val mediaItems = galleryDatabase.mediaItemDao.getMediaItemsByModifiedAt().first()
+        // using test dataset for demo
+        val mediaItems = galleryDatabase.mediaItemDao.getMediaItemsByPath("face_dataset/").first()
 
-        mediaItems.take(100).forEach { mediaItem ->
+        mediaItems.forEach { mediaItem ->
             try {
                 val mediaItemBitmap = this.getMediaItemBitmap(mediaItem.uri)
                 val inputImage = InputImage.fromFilePath(applicationContext, mediaItem.uri)
